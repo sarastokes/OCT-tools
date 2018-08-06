@@ -2,7 +2,7 @@
 Segmentation and analysis of retinal layers from individual OCT b-scans, with an emphasis on computing choroid thickness. Developed by Sara Patterson in the Neitz lab at University of Washington.
 
 
-All dependencies are provided, except the [GUI Layout Toolbox][guilayout].
+This code was written in Matlab 2018 and requires the Bioinformatics toolbox. All external dependencies are provided, except the free [GUI Layout Toolbox][guilayout].
 
 
 The initial ILM and RPE segmentation uses an algorithm introduced in:

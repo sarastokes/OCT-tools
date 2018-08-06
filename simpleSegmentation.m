@@ -30,6 +30,7 @@ function [rpe, ilm] = simpleSegmentation(img, varargin)
     % History:
     %   Original - Pangyu Teng (from Mathworks File Exchange)
     %   3Aug2018 - SSP - slightly modified, wrapped in function
+    %   5Aug2018 - SSP - changed output from [y;x] to [x,y]
     % ---------------------------------------------------------------------
     
     ip = inputParser();
@@ -189,6 +190,6 @@ function [rpe, ilm] = simpleSegmentation(img, varargin)
         end
     end
 
-    ilm = [pathX; pathY];
-    rpe = [pathX2; pathY2];
+    ilm = [pathY; pathX]';
+    rpe = [pathY2; pathX2]';
 end
