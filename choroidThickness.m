@@ -16,6 +16,9 @@ function [ratio, choroid_size, retina_size] = choroidThickness(octName, octPath)
     
     % Template for reading segmentation files
     getPath = @(x) [octPath, filesep, x, '_', octName, '.txt'];
+    if ~exist(getPath('rpe'), 'file')
+        getPath = @(x) [octPath, filesep, octName, '_', x, '.txt'];
+    end
     
     % Load segmentation data
     rpe0 = dlmread(getPath('rpe'));

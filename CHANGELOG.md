@@ -1,5 +1,11 @@
 # CHANGELOG
 
+### 6Aug2018
+- New function `alignImages.m` to determine rotation degree necessary to align images of the same eye from different days. 
+- New function `compareChoroids.m` plots a comparison of two choroid thickness ratios and optionally aligns by shifting the 2nd ratio along the x-axis.
+- Updates to `choroidThickness.m`.
+- Utility function `exportFigure.m` for saving images of segmentation from `ChoroidIdentification.m`.
+
 ### 5Aug2018
 - Array format of RPE and ILM segmentation now matches Edges and Choroid. Previous code needs to account for `[y;x]` to `[x, y]` conversion.
 - Added initial analysis function `choroidThickness.m`. Next step is to align the signals.
