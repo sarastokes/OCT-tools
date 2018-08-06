@@ -5,11 +5,19 @@ classdef ChoroidIdentification < handle
     %   obj = ChoroidIdentification(im);
     %
     % Input:
-    %   im          Image or file name, if empty will prompt to choose image
+    %   im          Image or file name,
+    %               If empty will prompt to choose image from file
+    %
+    % Properties:
+    %   RPE             RPE-Choroid boundary
+    %   ILM             ILM boundary
+    %   Choroid         Choroid upper boundary
+    %   ChoroidParams   Parameters to create parabola/Choroid
+    %   Edges           Canny edge detection result, modified by user
     %
     % History:
     %   2Aug2018 - SSP
-    % -------------------------------------------------------------------------
+    % ---------------------------------------------------------------------
     
     properties
         RPE
@@ -17,11 +25,15 @@ classdef ChoroidIdentification < handle
         Choroid
         ChoroidParams
         Vertex 		% [x, y] array
+    end
+    
+    properties (SetObservable, AbortSet)
         Edges 		% Nx2 array
     end
     
     properties
         waitingForVertex = false;
+        waitingForEdge = false;
     end
     
     properties (SetAccess = private)
@@ -53,12 +65,15 @@ classdef ChoroidIdentification < handle
             if ~exist('InPolygon.mexw64', 'file')
                 mex('InPolygon.c');
             end
+            
+            addlistener(obj, 'Edges', 'PostSet', @obj.onEdgesChanged);
         end
     end
     
     % User interface functions
-    methods (Access = private)               
+    methods (Access = private)
         function plotChoroid(obj)
+            % PLOTCHOROID
             delete(findobj(obj.figureHandle, 'Tag', 'Choroid'));
             line(obj.axHandle, obj.Choroid(:, 1), obj.Choroid(:, 2),...
                 'Color', 'r', 'LineWidth', 0.5,...
@@ -67,9 +82,10 @@ classdef ChoroidIdentification < handle
                 'Value', 1);
         end
         
-        function plotEdges(obj)
+        function plotEdges(obj, newEdges)
+            % PLOTEDGES
             line(obj.axHandle,...
-                obj.Edges(:, 1), obj.Edges(:, 2),...
+                newEdges(:, 1), newEdges(:, 2),...
                 'Marker', '.', 'MarkerSize', 1,...
                 'Color', [0 1 1], 'LineStyle', 'none',...
                 'Tag', 'Edges');
@@ -103,12 +119,19 @@ classdef ChoroidIdentification < handle
                 'Name', 'Choroid Identification',...
                 'Color', 'w',...
                 'DefaultUicontrolBackgroundColor', 'w',...
-                'WindowButtonUpFcn', @obj.buttonUpFcn);
+                'WindowButtonUpFcn', @obj.buttonUpFcn,...
+                'KeyPressFcn', @obj.onKeyPress);
             mainLayout = uix.VBoxFlex('Parent', obj.figureHandle,...
                 'BackgroundColor', 'w');
             
+            uicontrol(mainLayout,...
+                'Style', 'text',...
+                'String', '',...
+                'Tag', 'Stat');
+            
             % Set up image display
-            obj.axHandle = axes('Parent', uipanel(mainLayout));
+            obj.axHandle = axes('Parent', uipanel(mainLayout,...
+                'BackgroundColor', 'w'));
             obj.imHandle = imagesc(obj.axHandle, obj.originalImage);
             colormap(obj.figureHandle, gray);
             axis(obj.axHandle, 'equal', 'tight', 'off');
@@ -176,12 +199,22 @@ classdef ChoroidIdentification < handle
                 'Tag', 'ShowEdges',...
                 'Enable', 'off',...
                 'Callback', @obj.onShowEdges);
-            uicontrol(edgeLayout,...
+            excludeLayout = uix.HBox('Parent', edgeLayout,...
+                'BackgroundColor', 'w');
+            uicontrol(excludeLayout,...
                 'Style', 'push',...
                 'String', 'Exclude Edges',...
                 'Tag', 'ExcludeEdges',...
                 'Enable', 'off',...
                 'Callback', @obj.onExcludeEdges);
+            uicontrol(excludeLayout,...
+                'Style', 'push',...
+                'String', 'Cut outliers',...
+                'Callback', @obj.onExcludeOutliers);
+            uicontrol(excludeLayout,...
+                'Style', 'edit',...
+                'String', '',...
+                'Tag', 'Bound');
             saveLayout = uix.VBox('Parent', uiLayout,...
                 'BackgroundColor', 'w');
             uicontrol(saveLayout, 'Style', 'text', 'String', 'OCT Name:');
@@ -193,8 +226,19 @@ classdef ChoroidIdentification < handle
                 'Style', 'push',...
                 'String', 'Save All',...
                 'Callback', @obj.onSaveAll);
+            uicontrol(saveLayout,...
+                'Style', 'push',...
+                'String', 'Save image',...
+                'Callback', @obj.onExportFigure);
             set(uiLayout, 'Widths', [-1, -1, -1.5, -0.5]);
-            set(mainLayout, 'Heights', [-6, -1]);
+            set(mainLayout, 'Heights', [-0.5, -6, -1.5]);
+        end
+    end
+    
+    methods (Access = private)
+        function onEdgesChanged(obj, ~, ~)
+            h = findobj(obj.figureHandle, 'Tag', 'Edges');
+            set(h, 'XData', obj.Edges(:, 1), 'YData', obj.Edges(:, 2));
         end
     end
     
@@ -205,14 +249,14 @@ classdef ChoroidIdentification < handle
             end
             bw1 = edge(obj.originalImage, 'Canny');
             % Exclude points below RPE
-            bw1(min(obj.RPE(10:end-10,:)):end,:) = false;
+            bw1(min(obj.RPE(10:end-10,2)):end,:) = false;
             % Exclude points above choroid vertex
             if ~isempty(obj.Vertex)
                 bw1(1:obj.Vertex(2)-10, :) = false;
             end
             [r, c] = find(bw1);
+            obj.plotEdges([c, r]);
             obj.Edges = [c, r];
-            obj.plotEdges();
         end
         
         function detectChoroid(obj)
@@ -223,6 +267,17 @@ classdef ChoroidIdentification < handle
             set(findobj(obj.figureHandle, 'Tag', 'ShowChoroid'),...
                 'Enable', 'on');
             obj.plotChoroid();
+        end
+        
+        function statusUpdate(obj, str)
+            % STATUSUPDATE  Update status text
+            if nargin < 2
+                str = '';
+            else
+                assert(ischar(str), 'Status updates must be char');
+            end
+            set(findobj(obj.figureHandle, 'Tag', 'Stat'), 'String', str);
+            drawnow;
         end
         
         function showByTag(obj, tag, action)
@@ -248,11 +303,29 @@ classdef ChoroidIdentification < handle
                     'BackgroundColor', 'w');
                 set(findobj(obj.figureHandle, 'Tag', 'DetectEdges'),...
                     'Enable', 'on');
+            elseif obj.waitingForEdge
+                newEdge = round(src.CurrentAxes.CurrentPoint(1,1:2));
+                obj.Edges = cat(1, obj.Edges, newEdge);
+                obj.waitingForEdge = false;
+                obj.statusUpdate('');
             end
         end
         
+        function onKeyPress(~, src, evt)
+            assignin('base', 'evt', evt);
+            assignin('base', 'src', src);
+        end
+        
         function onSegmentImage(obj, ~, ~)
+            obj.statusUpdate('Segmenting Image');
             obj.addSegmentation();
+            obj.statusUpdate('');
+        end
+        
+        function onExportFigure(obj, ~, ~)
+            newAxes = exportFigure(obj.ax);
+            [fname, fpath] = uiputfile('*.png');
+            print(newAxes.Parent, [fpath, filesep, fname], '-dpng', '-r600'); 
         end
         
         function onDetectEdges(obj, ~, ~)
@@ -267,8 +340,9 @@ classdef ChoroidIdentification < handle
         
         function onLoadEdges(obj, ~, ~)
             x = uigetfile('*.txt');
-            obj.Edges = dlmread(x);
-            obj.plotEdges();
+            newEdges = dlmread(x);
+            obj.plotEdges(newEdges);
+            obj.Edges = newEdges;
             set(findobj(obj.figureHandle, 'Tag', 'ShowEdges'),...
                 'Enable', 'on');
             set(findobj(obj.figureHandle, 'Tag', 'SaveEdges'),...
@@ -334,6 +408,51 @@ classdef ChoroidIdentification < handle
                 'BackgroundColor', 'w');
         end
         
+        function onAddEdges(obj, ~, ~)
+            obj.waitingForEdge = true;
+            obj.statusUpdate('Waiting for new edge');
+        end
+        
+        function onExcludeOutliers(obj, ~, ~)
+            if isempty(obj.Choroid)
+                obj.statusUpdate('Requires existing choroid fit');
+                return;
+            end
+            
+            h = findobj(obj.figureHandle, 'Tag', 'Bound');
+            try
+                bnd = str2double(get(h, 'String'));
+                set(h, 'BackgroundColor', 'w');
+            catch
+                set(h, 'BackgroundColor', 'r');
+                obj.statusUpdate('Bound did not convert to valid integer');
+                return;
+            end
+            
+            lowerBound = obj.Choroid(:, 2) - bnd;
+            upperBound = obj.Choroid(:, 2) + bnd;
+            
+            % Identify edges outside of boundary
+            excludedEdges = [];
+            for i = 1:size(obj.Edges, 1)
+                if obj.Edges(i, 2) < lowerBound(i)
+                    excludedEdges = [excludedEdges, i]; %#ok
+                elseif obj.Edges(i, 2) > upperBound(i)
+                    excludedEdges = [excludedEdges, i]; %#ok
+                end
+            end
+            obj.Edges(unique(excludedEdges), :) = [];
+            % Replot edges
+            h = findobj(obj.figureHandle, 'Tag', 'Edges');
+            set(h, 'XData', obj.Edges(:, 1), 'YData', obj.Edges(:, 2));
+        end
+        
+        function onFitChoroid(obj, ~, ~)
+            if ~isempty(obj.Edges)
+                obj.detectChoroid();
+            end
+        end
+        
         function onSaveAll(obj, ~, ~)
             h = findobj(obj.figureHandle, 'Tag', 'OCTName');
             if ~isempty(h.String)
@@ -342,18 +461,12 @@ classdef ChoroidIdentification < handle
                 return
             end
             fpath = [uigetdir(), filesep, octName];
-            dlmwrite([fpath, '_edges,txt'], obj.Edges);
+            dlmwrite([fpath, '_edges.txt'], obj.Edges);
             dlmwrite([fpath, '_choroid.txt'], obj.Choroid);
             dlmwrite([fpath, '_rpe.txt'], obj.RPE);
             dlmwrite([fpath, '_ilm.txt'], obj.ILM);
             dlmwrite([fpath, '_parabola.txt'], obj.ChoroidParams);
             fprintf('Saved as: %s\n', fpath);
-        end
-        
-        function onFitChoroid(obj, ~, ~)
-            if ~isempty(obj.Edges)
-                obj.detectChoroid();
-            end
         end
     end
 end
