@@ -1,5 +1,8 @@
 # CHANGELOG
 
+### 7Aug2018
+- Working class encompassing existing functions for individual OCT images (`OCT.m`).
+
 ### 6Aug2018
 - New function `alignImages.m` to determine rotation degree necessary to align images of the same eye from different days. 
 - New function `compareChoroids.m` plots a comparison of two choroid thickness ratios and optionally aligns by shifting the 2nd ratio along the x-axis.
