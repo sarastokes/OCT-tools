@@ -36,6 +36,7 @@ classdef OCT < handle
         choroidSize
         retinaSize
         choroidRatio
+        shiftedRatios = false;
     end
 
     % Lazy loading of images and analysis
@@ -70,6 +71,8 @@ classdef OCT < handle
 
             obj.originalImage = obj.fetchImage();
             obj.load();
+            
+            obj.shiftedRatios = false;
         end
 
         function str = getPath(obj, x)
@@ -105,6 +108,10 @@ classdef OCT < handle
                 x_min = min([obj.RPE(:, 1); obj.ILM(:, 1)]);
                 x_max = max([obj.RPE(:, 1); obj.ILM(:, 1)]);
                 xpts = x_min:x_max;
+                
+                if ~isempty(obj.Shift)
+                    xpts = xpts + obj.Shift;
+                end
             else
                 xpts = [];
             end
@@ -112,8 +119,11 @@ classdef OCT < handle
     end
 
     methods
-        function plotRatio(obj)
+        function plotRatio(obj, smoothFac)
             % PLOTRATIO
+            if nargin < 2
+                smoothFac = 10;
+            end
             if isempty(obj.choroidRatio)
                 obj.doAnalysis();
             end
@@ -124,7 +134,8 @@ classdef OCT < handle
             % Raw data
             plot(xpts, obj.choroidRatio, '.k', 'MarkerSize', 4);
             % Smoothed data
-            plot(xpts, smooth(obj.choroidRatio, 8), 'b', 'LineWidth', 1.5);
+            plot(xpts, smooth(obj.choroidRatio, smoothFac),...
+                'b', 'LineWidth', 1.5);
             xlim([0, max(xpts)]); ylim([0, 2]);
             title([obj.imageName ' - Choroid Thickness']);
             set(gca, 'Box', 'off'); grid on;
@@ -165,26 +176,19 @@ classdef OCT < handle
             else
                 octImage = obj.originalImage;
             end
-        end
-
-        function set.RPE(obj, RPE)
-            obj.RPE = RPE;
-        end
-
-        function set.ILM(obj, ILM)
-            obj.ILM = ILM;
-        end
-
-        function set.Choroid(obj, choroid)
-            obj.Choroid = choroid;
-        end
-
-        function set.ChoroidParams(obj, choroidParams)
-            obj.ChoroidParams = choroidParams;
-        end
-
-        function set.Edges(obj, edges)
-            obj.Edges = edges;
+            
+            % Rotate the image, if necessary
+            if ~isempty(obj.Theta)
+                octImage = imrotate(octImage, obj.Theta);
+                fprintf('Applied rotation of %.2f degrees\n', obj.Theta);
+            end
+            
+            % Crop the image, if necessary
+            if ~isempty(obj.CropValues)
+                fprintf('Cropped by %u, %u\n',...
+                    round(size(octImage)-obj.CropValues(3:4)));
+                octImage = imcrop(octImage, obj.CropValues);
+            end
         end
     end
 

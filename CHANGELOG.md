@@ -2,6 +2,7 @@
 
 ### 7Aug2018
 - Working class encompassing existing functions for individual OCT images (`OCT.m`).
+- General improvements to workflow while analyzing images.
 
 ### 6Aug2018
 - New function `alignImages.m` to determine rotation degree necessary to align images of the same eye from different days. 
