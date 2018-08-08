@@ -1,5 +1,10 @@
 # CHANGELOG
 
+### 8Aug2018
+- Extra visualization options for the `OCT` class.
+- QOD export option for getting choroid ratios into Igor Pro.
+- Added instructions to README
+
 ### 7Aug2018
 - Working class encompassing existing functions for individual OCT images (`OCT.m`).
 - General improvements to workflow while analyzing images.

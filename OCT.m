@@ -111,14 +111,36 @@ classdef OCT < handle
                 
                 if ~isempty(obj.Shift)
                     xpts = xpts + obj.Shift;
+                    fprintf('Applying shift of %u pixels\n', obj.Shift);
                 end
             else
                 xpts = [];
             end
         end
+        
+        function igor = igor(obj, smoothFac)
+            if nargin < 2
+                smoothFac = 12;
+            end
+            if isempty(obj.choroidRatio)
+                obj.doAnalysis();
+            end
+            igor = [obj.getXPts', smooth(obj.choroidRatio, smoothFac)];
+            openvar('igor');
+        end
     end
 
     methods
+        
+        function show(obj)
+            % SHOW  Plot the OCT image (with rotation and crop)
+            figure();
+            imagesc(obj.octImage); colormap(gray);
+            title(sprintf('Image #%u', obj.imageID));
+            axis image off
+            tightfig(gcf);
+        end
+        
         function plotRatio(obj, smoothFac)
             % PLOTRATIO
             if nargin < 2
@@ -186,7 +208,8 @@ classdef OCT < handle
             % Crop the image, if necessary
             if ~isempty(obj.CropValues)
                 fprintf('Cropped by %u, %u\n',...
-                    round(size(octImage)-obj.CropValues(3:4)));
+                    round([size(octImage, 1) - obj.CropValues(3),...
+                           size(octImage, 2) - obj.CropValues(4)]));
                 octImage = imcrop(octImage, obj.CropValues);
             end
         end

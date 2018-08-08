@@ -1,26 +1,41 @@
-function [newIm2, res] = alignImages(im1, im2, plotFlag)
+function [newIm2, Theta] = alignImages(im1, im2, plotFlag, savePath)
     % ALIGNIMAGES
     % 
     % Description:
     %   Align OCT images of the same eye
     %
     % Inputs:
-    %   im1     First image
-    %   im2     Second image, this one will be rotated/translated
+    %   im1         First image
+    %   im2         Second image, this one will be rotated/translated
     % Optional inputs:
-    %   plotme  0 = no plots, 1 = final images (default), 2 = all images
+    %   plotFlag    0 = none, 1 = final images (default), 2 = all images
+    %   savePath    If provided, saves .txt file of the rotation to image 2
     % Outputs:
-    %   im2     Aligned image
-    %   scale2  Scaling factor used
-    %   theta2  Rotation factor used
+    %   newIm2      Aligned image
+    %   Theta       Rotation factor used
     %
+    % References
     % https://www.mathworks.com/help/vision/examples/
     % find-image-rotation-and-scale-using-automated-feature-matching.html
+    %
+    % History:
+    %   6Aug2018 - SSP
     % ---------------------------------------------------------------------
+    if nargin < 4
+        savePath = [];
+    end
+    
     if nargin < 3
         plotFlag = 1;
     else
         assert(ismember(plotFlag, 0:2), 'Set plotFlag to 0, 1 or 2');
+    end
+    if isa(im1, 'OCT')
+        im1 = im1.octImage;
+    end
+    
+    if isa(im2, 'OCT')
+        im2 = im2.octImage;
     end
     
     if plotFlag > 0
@@ -67,9 +82,9 @@ function [newIm2, res] = alignImages(im1, im2, plotFlag)
     
     ss = Tinv(2, 1);
     sc = Tinv(1, 1);
-    res.scale2 = sqrt(ss*ss + sc*sc);
-    res.theta2 = atan2(ss, sc)*180/pi;
-    fprintf('Scale = %.2f\nTheta = %.2f\n', res.scale2, res.theta2);
+    Scale = sqrt(ss*ss + sc*sc);
+    Theta = -1 * (atan2(ss, sc)*180/pi);
+    fprintf('Scale = %.2f\nTheta = %.2f\n', Scale, Theta2);
     
     % TRANSFORM IMAGE
     outputView = imref2d(size(im1));
@@ -79,4 +94,12 @@ function [newIm2, res] = alignImages(im1, im2, plotFlag)
         imshowpair(im1, newIm2);
         title('Aligned images');
     end
-    res.tform = tform;
+    
+    % SAVE OUTPUT
+    if ~isempty(savePath)
+        if isempty(strfind(savePath, '_theta.txt')) %#ok
+            savePath = [savePath, '_theta.txt'];
+        end
+        dlmwrite(savePath, Theta);
+        fprintf('Saved to %s\n', savePath);
+    end
