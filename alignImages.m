@@ -84,7 +84,7 @@ function [newIm2, Theta] = alignImages(im1, im2, plotFlag, savePath)
     sc = Tinv(1, 1);
     Scale = sqrt(ss*ss + sc*sc);
     Theta = -1 * (atan2(ss, sc)*180/pi);
-    fprintf('Scale = %.2f\nTheta = %.2f\n', Scale, Theta2);
+    fprintf('Scale = %.2f\nTheta = %.2f\n', Scale, Theta);
     
     % TRANSFORM IMAGE
     outputView = imref2d(size(im1));
