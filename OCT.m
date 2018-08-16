@@ -11,6 +11,8 @@ classdef OCT < handle
     %
     % History:
     %   7Aug2018 - SSP - working version compiled from previous functions
+    %   11Aug2018 - SSP - added crop function
+    %   14Aug2018 - SSP - added reload option
     % ---------------------------------------------------------------------
 
     % Identifiers
@@ -74,6 +76,11 @@ classdef OCT < handle
             
             obj.shiftedRatios = false;
         end
+        
+        function reload(obj)
+            % RELOAD  Reload from .txt files
+            obj.load();
+        end
 
         function str = getPath(obj, x)
             % GETPATH  Returns path of saved feature .txt file
@@ -81,6 +88,29 @@ classdef OCT < handle
             assert(ismember(x, obj.FEATURES),...
                 'Path value not in features list!');
             str = [obj.imagePath, filesep, obj.imageName, '_', x, '.txt'];
+        end
+        
+        function cropValues = crop(obj, saveValues)
+            if nargin < 2
+                saveValues = false;
+            else
+                assert(islogical(saveValues), 'Save values should be t/f');
+            end
+            
+            figure(); 
+            [~, cropValues] = imcrop(obj.octImage);
+            
+            % Return if no crop specified.
+            if isempty(cropValues)
+                return;
+            end          
+            cropValues = [ceil(cropValues(1:2)), floor(cropValues(3:4))];
+            
+            if saveValues
+                str = [obj.imagePath, filesep, obj.imageName, '_crop.txt'];
+                dlmwrite(str, cropValues);
+                fprintf('Wrote crop values to: %s\n', str);
+            end
         end
 
         function doAnalysis(obj)
@@ -130,13 +160,15 @@ classdef OCT < handle
         end
     end
 
+    % Visualization methods
     methods
-        
-        function show(obj)
+        function show(obj, ax)
             % SHOW  Plot the OCT image (with rotation and crop)
-            figure();
-            imagesc(obj.octImage); colormap(gray);
-            title(sprintf('Image #%u', obj.imageID));
+            if isempty(ax)
+                ax = axes('Parent', figure());
+            end
+            imagesc(ax, obj.octImage); colormap(gray);
+            title(ax, sprintf('Image #%u', obj.imageID));
             axis image off
             tightfig(gcf);
         end
@@ -183,6 +215,16 @@ classdef OCT < handle
             set(gca, 'Box', 'off'); grid on;
             ylabel('Width (pixels)');
             xlabel('x-axis (pixels)');
+        end
+        
+        function showSegmentation(obj)
+            if isempty(obj.RPE)
+                return
+            end
+            obj.show(); hold on;
+            plot(obj.RPE(:, 1), obj.RPE(:, 2), 'b');
+            plot(obj.ILM(:, 1), obj.ILM(:, 2), 'b');
+            plot(obj.Choroid(:, 1), obj.Choroid(:, 2), 'r');
         end
     end
 

@@ -1,5 +1,8 @@
 # CHANGELOG
 
+### 16Aug2018
+- Reload and crop functions for OCT class.
+
 ### 8Aug2018
 - Extra visualization options for the `OCT` class.
 - QOD export option for getting choroid ratios into Igor Pro.
