@@ -1,5 +1,5 @@
 # OCT-tools
-Segmentation and analysis of retinal layers from individual OCT b-scans, with an emphasis on computing choroid thickness. Developed by Sara Patterson (sarap44_at_uw.edu) in the [Neitz lab][neitzlab] at University of Washington. This is quick project that is unlikely to be maintained or further improved.
+Segmentation and analysis of retinal layers from individual OCT b-scans, with an emphasis on computing choroid thickness. Developed by Sara Patterson (sarap44_at_uw.edu) in the [Neitz lab][neitzlab] at University of Washington. This is quick project that is unlikely to be maintained or further improved, however, contributions are welcome.
 
 ### Usage
 The code works best when all the images are in a single folder with numbers as filenames (e.g., `1.png`, `2.png`, etc). The analysis and data will be saved with the prefix `im1_`, `im2_`, etc.
