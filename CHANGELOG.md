@@ -1,5 +1,9 @@
 # CHANGELOG
 
+### 20Dec2018
+- Added `ChoroidApp.m`, an improved version of `ChoroidIdentification.m` that relies on control points, not edge detection.
+- Moved `ChoroidIdentification.m`
+
 ### 16Aug2018
 - Reload and crop functions for OCT class.
 

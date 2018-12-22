@@ -96,11 +96,9 @@ classdef ChoroidIdentification < handle
             set(findobj(obj.figureHandle, 'Tag', 'ShowEdges'),...
                 'Value', 1);
         end
-
-        function addSegmentation(obj)
-            % ADDSEGMENTATION
-            [obj.ILM, obj.RPE] = simpleSegmentation(obj.originalImage);
-            % Delete existing
+        
+        function plotRetina(obj)
+            % PLOTRETINA
             delete(findobj(obj.figureHandle, 'Tag', 'RPE'));
             delete(findobj(obj.figureHandle, 'Tag', 'ILM'));
             % Plot ILM and RPE lines
@@ -114,6 +112,12 @@ classdef ChoroidIdentification < handle
                 'LineWidth', 1.25,...
                 'Color', 'b',...
                 'Tag', 'ILM');
+        end
+
+        function detectRetina(obj)
+            % DETECTRETINA
+            [obj.ILM, obj.RPE] = simpleSegmentation(obj.originalImage);
+            obj.plotRetina();
             set(findobj(obj.figureHandle, 'Tag', 'ShowSegments'),...
                 'Value', 1)
         end
@@ -123,8 +127,7 @@ classdef ChoroidIdentification < handle
                 'Name', 'Choroid Identification',...
                 'Color', 'w',...
                 'DefaultUicontrolBackgroundColor', 'w',...
-                'WindowButtonUpFcn', @obj.buttonUpFcn,...
-                'KeyPressFcn', @obj.onKeyPress);
+                'WindowButtonUpFcn', @obj.buttonUpFcn);
             mainLayout = uix.VBoxFlex('Parent', obj.figureHandle,...
                 'BackgroundColor', 'w');
 
@@ -250,7 +253,7 @@ classdef ChoroidIdentification < handle
         function detectEdges(obj)
             % DETECTEDGES
             if isempty(obj.RPE)
-                obj.addSegmentation();
+                obj.detectRetina();
             end
             bw1 = edge(obj.originalImage, 'Canny');
             % Exclude points below RPE
@@ -265,7 +268,7 @@ classdef ChoroidIdentification < handle
         end
 
         function detectChoroid(obj)
-            % FITCHOROID
+            % DETECTCHOROID
             [fitted, obj.ChoroidParams] = parabola_leastsquares(...
                 obj.Edges(:, 1), obj.Edges(:, 2));
             obj.Choroid = [obj.Edges(:, 1), fitted];
@@ -318,14 +321,9 @@ classdef ChoroidIdentification < handle
             end
         end
 
-        function onKeyPress(~, src, evt)
-            assignin('base', 'evt', evt);
-            assignin('base', 'src', src);
-        end
-
         function onSegmentImage(obj, ~, ~)
             obj.statusUpdate('Segmenting Image');
-            obj.addSegmentation();
+            obj.detectRetina();
             obj.statusUpdate('');
         end
 
