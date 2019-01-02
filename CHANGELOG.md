@@ -1,5 +1,8 @@
 # CHANGELOG
 
+### 1Jan2019
+- Prepped `ChoroidApp.m` for new experiments.
+
 ### 20Dec2018
 - Added `ChoroidApp.m`, an improved version of `ChoroidIdentification.m` that relies on control points, not edge detection.
 - Moved `ChoroidIdentification.m`

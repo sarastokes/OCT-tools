@@ -42,7 +42,11 @@ classdef ChoroidApp < handle
     methods 
         function obj = ChoroidApp(im)
             if nargin == 0
-                im = uigetfile();
+                im = uigetfile({'*.png'; '*.tiff'; '*.jpeg'});
+                if ~ischar(im)
+                    disp('No image selected!');
+                    return
+                end
             end
             
             % Parse input file, get image
@@ -75,10 +79,19 @@ classdef ChoroidApp < handle
     % Analysis functions
     methods (Access = private)
         function detectChoroid(obj)
-            obj.ControlPoints = sort(obj.ControlPoints);
+            % DETECTCHOROID  Run choroid detection fit
+            
+            % Fit parabola to control points
+            [~, ind] = sort(obj.ControlPoints);
+            obj.ControlPoints = obj.ControlPoints(ind(:, 1), :);
+
             [~, obj.ChoroidParams] = parabola_leastsquares(...
-                obj.ControlPoints(:, 1), obj.ControlPoints(:, 2));
-            obj.Choroid = parabola(size(obj.imHandle.Data, 2), obj.ChoroidParams);
+                obj.ControlPoints(:, 1), obj.ControlPoints(:, 2), false);
+            
+            % Evaluate over entire image x-axis
+            xpts = 1:size(obj.imHandle.CData, 2);
+            obj.Choroid = [xpts; parabola(xpts, obj.ChoroidParams)]';
+            
             % Must have a fitted choroid to display it
             set(findobj(obj.figHandle, 'Tag', 'ShowChoroid'),...
                 'Enable', 'on', 'Value', 1);
@@ -87,6 +100,7 @@ classdef ChoroidApp < handle
         end
 
         function detectRetina(obj)
+            % DETECTRETINA  Run retinal layer segmentation
             [obj.ILM, obj.RPE] = simpleSegmentation(obj.originalImage);
             obj.plotRetina();
             % Make sure show segmented retina checkbox is checked
@@ -127,7 +141,7 @@ classdef ChoroidApp < handle
                 'Parent', obj.axHandle,...
                 'Marker', '+', 'MarkerSize', 5,...
                 'Color', rgb('orange'),...
-                'Tag', 'Vertex');
+                'Tag', 'CtrlPt');
         end
     end
     
@@ -149,13 +163,14 @@ classdef ChoroidApp < handle
             obj.statusUpdate('');
         end
 
-        function onAddCtrlPoint(obj, src, ~)
+        function onAddCtrlPoint(obj, ~, ~)
             obj.waitingForPoint = true;
-            set(src, 'BackgroundColor', [0.5, 0.5, 0.5],...
-                'String', 'Waiting...');
+            obj.statusUpdate('Waiting for control point placement');
+            % set(src, 'BackgroundColor', [0.5, 0.5, 0.5],...
+            %     'String', 'Waiting...');
         end
 
-        function onClearCtrlPoints(~, ~, ~)
+        function onClearCtrlPoints(obj, ~, ~)
             % ONCLEARCTRLPTS  Delete control points, remove from plot
             obj.ControlPoints = [];
             delete(findall(obj.axHandle, 'Tag', 'CtrlPt'));
@@ -164,6 +179,7 @@ classdef ChoroidApp < handle
         function onFitChoroid(obj, ~, ~)
             if ~isempty(obj.ControlPoints)
                 obj.detectChoroid();
+                obj.plotChoroid();
             end
         end
 
@@ -177,6 +193,7 @@ classdef ChoroidApp < handle
         end
        
         function onExportFigure(obj, ~, ~)
+            % ONEXPORTFIGURE  Export image with any visible segmentation
             newAxes = exportFigure(obj.axHandle);
             [fname, fpath] = uiputfile('*.png');
             print(newAxes.Parent, [fpath, filesep, fname], '-dpng', '-r600');
@@ -248,9 +265,10 @@ classdef ChoroidApp < handle
                 'BackgroundColor', 'w');
 
             % Status display
-            uicontrol(mainLayout,...
-                'Style', 'text',...
+            uicontrol(mainLayout, 'Style', 'text',...
                 'String', '',...
+                'FontSize', 16,...
+                'FontWeight', 'bold',...
                 'Tag', 'Status');
             
             % Setup the image display

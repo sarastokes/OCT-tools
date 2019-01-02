@@ -12,7 +12,7 @@ function [fit, beta] = parabola_leastsquares(x, y, interpFit)
     %   x                   x-axis points
     %   y                   y-axis points
     % Optional inputs:
-    %   interpOutput        interpolate to regular spacing along x(
+    %   interpOutput        interpolate to regular spacing along x
     %                       default = false
     %
     % Outputs:
