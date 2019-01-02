@@ -88,7 +88,18 @@ classdef HistogramSlider < handle
         end
     end
     
-    % Helper functions
+    % Callback methods
+    methods (Access = private)
+        
+        function onSlide(obj, ~, ~)
+            obj.plotHistogram(obj.sliderValue);
+            obj.plotRPE(obj.sliderValue);
+            obj.plotILM(obj.sliderValue);
+            obj.plotChoroid(obj.sliderValue);
+        end
+    end
+    
+    % User interface functions
     methods (Access = private)
         function plotHistogram(obj, xInd)
             set(obj.histLine, 'XData', obj.octImage(:, round(xInd)));
@@ -114,20 +125,6 @@ classdef HistogramSlider < handle
                 set(h, 'YData', [obj.Choroid(xInd, 2), obj.Choroid(xInd, 2)]);
             end
         end
-    end
-
-    % Callback methods
-    methods (Access = private)
-        
-        function onSlide(obj, ~, ~)
-            obj.plotHistogram(obj.sliderValue);
-            obj.plotRPE(obj.sliderValue);
-            obj.plotILM(obj.sliderValue);
-            obj.plotChoroid(obj.sliderValue);
-        end
-    end
-    
-    methods (Access = private)
         
         function createUI(obj)
             obj.figHandle = figure('Name', 'HistogramSlider',...
