@@ -61,17 +61,7 @@ classdef ChoroidApp < handle
                 im = rgb2gray(im);
             end
             obj.originalImage = im;
-
-            % Compile the InPolygon function, if necessary
-            octDir = [fileparts(mfilename('fullpath')), filesep, 'lib'];
-            if ~exist([octDir, filesep, 'InPolygon.mex64'], 'file')
-                try
-                    mex([octDir, filesep, 'InPolygon.c']);
-                catch
-                    error('Need to compile InPolygon.c');
-                end
-            end
-
+            
             obj.createUI();
         end
     end
@@ -81,10 +71,10 @@ classdef ChoroidApp < handle
         function detectChoroid(obj)
             % DETECTCHOROID  Run choroid detection fit
             
-            % Fit parabola to control points
             [~, ind] = sort(obj.ControlPoints);
             obj.ControlPoints = obj.ControlPoints(ind(:, 1), :);
 
+            % Fit parabola to control points
             [~, obj.ChoroidParams] = parabola_leastsquares(...
                 obj.ControlPoints(:, 1), obj.ControlPoints(:, 2), false);
             
@@ -92,7 +82,7 @@ classdef ChoroidApp < handle
             xpts = 1:size(obj.imHandle.CData, 2);
             obj.Choroid = [xpts; parabola(xpts, obj.ChoroidParams)]';
             
-            % Must have a fitted choroid to display it
+            % Update the user interface accordingly
             set(findobj(obj.figHandle, 'Tag', 'ShowChoroid'),...
                 'Enable', 'on', 'Value', 1);
             obj.statusUpdate(sprintf('Fit Choroid: %.2f, %.2f, %.4f',...
@@ -136,7 +126,7 @@ classdef ChoroidApp < handle
         end
 
         function plotLastControlPoint(obj)
-            % PLOTCONTROLPOINT
+            % PLOTCONTROLPOINT  Add most recent control point to plot
             line(obj.ControlPoints(end, 1), obj.ControlPoints(end, 2),...
                 'Parent', obj.axHandle,...
                 'Marker', '+', 'MarkerSize', 5,...
@@ -166,8 +156,6 @@ classdef ChoroidApp < handle
         function onAddCtrlPoint(obj, ~, ~)
             obj.waitingForPoint = true;
             obj.statusUpdate('Waiting for control point placement');
-            % set(src, 'BackgroundColor', [0.5, 0.5, 0.5],...
-            %     'String', 'Waiting...');
         end
 
         function onClearCtrlPoints(obj, ~, ~)
@@ -234,6 +222,14 @@ classdef ChoroidApp < handle
             set(findobj(obj.figHandle, 'Tag', tag),...
                 'Visible', action);
         end
+
+        function flipByTag(obj, tag)
+            % FLIPBYTAG  Set visibility to opposite current setting
+            h = findobj(obj.figHandle, 'Tag', tag);
+            if ~isempty(h)
+                set(h, 'Visible', obj.onOff(get(h, 'Visible')));
+            end
+        end
     end
 
     % User interaction functions
@@ -249,6 +245,24 @@ classdef ChoroidApp < handle
                 obj.statusUpdate('');
             end
         end
+
+        function onKeyPress(obj, ~, evt)
+            % ONKEYPRESS  Key controls for common actions
+            switch evt.Character
+                case 'a'                   
+                    obj.waitingForPoint = true;
+                    obj.statusUpdate('Waiting for control point placement');
+                case 'f'
+                    if ~isempty(obj.ControlPoints)
+                        obj.detectChoroid();
+                    end
+                case 'c'
+                    obj.flipByTag('Choroid');
+                case 'r'
+                    obj.flipByTag('RPE');
+                    obj.flipByTag('ILM');
+            end
+        end
     end
 
     % User interface setup functions run at initialization
@@ -259,6 +273,7 @@ classdef ChoroidApp < handle
                 'Name', 'ChoroidApp',...
                 'Color', 'w',...
                 'DefaultUicontrolBackgroundColor', 'w',...
+                'KeyPressFcn', @obj.onKeyPress,...
                 'WindowButtonUpFcn', @obj.onWindowButtonUp);
             
             mainLayout = uix.VBoxFlex('Parent', obj.figHandle,...
@@ -341,6 +356,16 @@ classdef ChoroidApp < handle
 
             set(uiLayout, 'Widths', [-1, -1, -1, -0.5]);
             set(mainLayout, 'Heights', [-0.5, -6, -1.5]);
+        end
+    end
+
+    methods (Static)
+        function action = onOff(action)
+            if strcmp(action, 'on');
+                action = 'off';
+            else
+                action = 'on';
+            end
         end
     end
 end
