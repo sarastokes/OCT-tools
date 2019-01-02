@@ -1,5 +1,8 @@
 # CHANGELOG
 
+### 2Jan2019
+- Wrote `HistogramSlider.m` to compare 1D histograms with segmented RPE, ILM and choroid.
+
 ### 1Jan2019
 - Prepped `ChoroidApp.m` for new experiments.
 

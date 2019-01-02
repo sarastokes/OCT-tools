@@ -361,7 +361,7 @@ classdef ChoroidApp < handle
 
     methods (Static)
         function action = onOff(action)
-            if strcmp(action, 'on');
+            if strcmp(action, 'on')
                 action = 'off';
             else
                 action = 'on';
