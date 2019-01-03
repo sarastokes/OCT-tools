@@ -2,6 +2,7 @@
 
 ### 2Jan2019
 - Wrote `HistogramSlider.m` to compare 1D histograms with segmented RPE, ILM and choroid.
+- Wrote `HistogramPeakSlider.m` to cooperate with `ChoroidApp.m` for interactive identification of choroid boundary control points using the 1D histograms.
 
 ### 1Jan2019
 - Prepped `ChoroidApp.m` for new experiments.

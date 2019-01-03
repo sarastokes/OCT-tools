@@ -64,6 +64,14 @@ classdef ChoroidApp < handle
             
             obj.createUI();
         end
+        
+        function addControlPoints(obj, newPoints)
+            for i = 1:size(newPoints, 1)
+                obj.ControlPoints = cat(1, obj.ControlPoints, newPoints(i,:));
+                obj.plotLastControlPoint();
+            end
+            obj.ControlPoints = unique(obj.ControlPoints, 'rows');
+        end
     end
 
     % Analysis functions

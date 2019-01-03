@@ -22,6 +22,6 @@ function [peakInd, troughInd] = histogramPeaks(x0, varargin)
         xlim(ax, [1, numel(x0)]); ylim(ax, [0, 255]);
     end
     
-    peakInd = [peakInd; peakMag];
-    troughInd = [troughInd; troughMag];
+    peakInd = [peakInd, peakMag];
+    troughInd = [troughInd, troughMag];
 end
