@@ -62,7 +62,7 @@ classdef OCT < handle
         octImage
         imageName
     end
-    
+
     % Transient copy of the full original image to support lazy loading
     properties (Transient = true, Hidden = true)
         originalImage

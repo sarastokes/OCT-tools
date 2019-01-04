@@ -2,6 +2,7 @@
 
 ### 3Jan2019
 - Added `scale` property to `OCT` class and modified `analysis\alignImages.m` accordingly
+- Wrote `ChoroidRatioView` to interactively display choroid ratio while fitting boundary control points with `ChoroidApp`.
 
 ### 2Jan2019
 - Wrote `HistogramSlider.m` to compare 1D histograms with segmented RPE, ILM and choroid.

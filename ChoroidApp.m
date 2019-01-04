@@ -20,6 +20,12 @@ classdef ChoroidApp < handle
     %   18Dec2018 - SSP - new framework, no edge detection
     %   ---------------------------------------------------------------------    
 
+    events 
+        FitChoroid
+        SegmentedRetinalLayers
+        ClosedApp      
+    end
+
     properties (SetAccess = private)
         RPE
         ILM 
@@ -55,6 +61,7 @@ classdef ChoroidApp < handle
             obj.parseInput(im);
             
             obj.createUI();
+            ChoroidRatioView(obj);
         end
         
         function addControlPoints(obj, newPoints)
@@ -89,6 +96,8 @@ classdef ChoroidApp < handle
                 'Enable', 'on', 'Value', 1);
             obj.statusUpdate(sprintf('Fit Choroid: %.2f, %.2f, %.4f',...
                 obj.ChoroidParams));
+            
+            notify(obj, 'FitChoroid');
         end
 
         function detectRetina(obj)
@@ -97,6 +106,8 @@ classdef ChoroidApp < handle
             obj.plotRetina();
             % Make sure show segmented retina checkbox is checked
             set(findobj(obj.figHandle, 'Tag', 'ShowRetina'), 'Value', 1);
+
+            notify(obj, 'SegmentedRetinalLayers');
         end
     end
     
@@ -270,6 +281,12 @@ classdef ChoroidApp < handle
                     obj.flipByTag('ILM');
             end
         end
+
+        function onClose(obj, ~, ~)
+            % ONCLOSE  Runs when ChoroidApp figure closes
+            notify(obj, 'ClosedApp');
+            delete(obj.figHandle);
+        end
     end
 
     % User interface setup functions run at initialization
@@ -281,7 +298,8 @@ classdef ChoroidApp < handle
                 'Color', 'w',...
                 'DefaultUicontrolBackgroundColor', 'w',...
                 'KeyPressFcn', @obj.onKeyPress,...
-                'WindowButtonUpFcn', @obj.onWindowButtonUp);
+                'WindowButtonUpFcn', @obj.onWindowButtonUp,...
+                'CloseRequestFcn', @obj.onClose);
             figPos(obj.figHandle, 1.5, 0.8);
             
             mainLayout = uix.HBoxFlex('Parent', obj.figHandle,...
@@ -359,7 +377,6 @@ classdef ChoroidApp < handle
             uicontrol(choroidLayout, 'Style', 'push',...
                 'String', 'Fit',...
                 'Tag', 'FitChoroid',...
-                'Enable', 'off',...
                 'Callback', @obj.onFitChoroid);
             uix.Empty('Parent', choroidLayout);
             uicontrol(choroidLayout, 'Style', 'check',...
@@ -395,15 +412,24 @@ classdef ChoroidApp < handle
             set(uiLayout, 'Heights', widths);
             set(octLayout, 'Heights', [-0.5, -6]);
             set(mainLayout, 'Widths', [-6, -1.5]);
+
+            % Plot imported data, if applicable
+            if ~isempty(obj.ControlPoints)
+                set(findobj(obj.figHandle, 'Tag', 'FitChoroid'),...
+                    'Enable', 'on');
+                obj.addControlPoints(obj.ControlPoints);
+            end
         end
 
-        function parseInput(obj, x)
-            % Get OCT image, other attributes if applicable
+        function tf = parseInput(obj, x)
+            % PARSEINPUT  Get OCT image and run initial processing
+
+            tf = false;
             if isa(x, 'OCT')
                 if ~isempty(x.ControlPoints)
                     selection = questdlg('Import existing control points?');
                     if strcmp(selection, 'Yes')
-                        obj.addControlPoints(x.ControlPoints);
+                        obj.ControlPoints = x.ControlPoints;
                     end
                 end
                 im = x.octImage;
@@ -412,7 +438,8 @@ classdef ChoroidApp < handle
             elseif isnumeric(x)
                 im = x;
             else 
-                error('CHOROIDAPP:InvalidInput');
+                error('CHOROIDAPP:InvalidInput',...
+                    'Input must be an image or OCT class');
             end
 
             % Convert to grayscale if necessary
