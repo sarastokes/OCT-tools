@@ -49,7 +49,7 @@ classdef ChoroidIdentification < handle
                 im = uigetfile();
             end
             
-            if isa(im, 'OCT')
+            if isa(im, 'DeprecatedOCT')
                 im = im.octImage;
             end
 
