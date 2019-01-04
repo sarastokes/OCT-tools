@@ -20,12 +20,15 @@ classdef ChoroidApp < handle
     %   18Dec2018 - SSP - new framework, no edge detection
     %   ---------------------------------------------------------------------    
 
-    properties
+    properties (SetAccess = private)
         RPE
         ILM 
-        Choroid
         ChoroidParams
         ControlPoints
+    end
+
+    properties (SetObservable, AbortSet)
+        Choroid
     end
 
     properties
@@ -42,25 +45,14 @@ classdef ChoroidApp < handle
     methods 
         function obj = ChoroidApp(im)
             if nargin == 0
-                im = uigetfile({'*.png'; '*.tiff'; '*.jpeg'});
+                im = uigetfile({'*.png'; '*.tiff'; '*.jpeg'; '*.jpg'});
                 if ~ischar(im)
                     disp('No image selected!');
                     return
                 end
             end
             
-            % Parse input file, get image
-            if isa(im, 'OCT')
-                im = im.octImage;
-            elseif ischar(im)
-                im = imread(im);
-            end
-
-            % Convert to grayscale if necessary
-            if numel(size(im)) == 3
-                im = rgb2gray(im);
-            end
-            obj.originalImage = im;
+            obj.parseInput(im);
             
             obj.createUI();
         end
@@ -71,6 +63,8 @@ classdef ChoroidApp < handle
                 obj.plotLastControlPoint();
             end
             obj.ControlPoints = unique(obj.ControlPoints, 'rows');
+            set(findobj(obj.figHandle, 'Tag', 'FitChoroid'),...
+                    'Enable', 'on');
         end
     end
 
@@ -179,6 +173,11 @@ classdef ChoroidApp < handle
             end
         end
 
+        function onUseHistogramApp(obj, ~, ~)
+            x = HistogramPeakSlider(obj.originalImage);
+            x.addParent(obj);
+        end
+
         function onShowChoroid(obj, src, ~)
             if src.Value == 1
                 action = 'on';
@@ -283,12 +282,15 @@ classdef ChoroidApp < handle
                 'DefaultUicontrolBackgroundColor', 'w',...
                 'KeyPressFcn', @obj.onKeyPress,...
                 'WindowButtonUpFcn', @obj.onWindowButtonUp);
+            figPos(obj.figHandle, 1.5, 0.8);
             
-            mainLayout = uix.VBoxFlex('Parent', obj.figHandle,...
+            mainLayout = uix.HBoxFlex('Parent', obj.figHandle,...
                 'BackgroundColor', 'w');
-
+            octLayout = uix.VBox('Parent', mainLayout,...
+                'Padding', 0, 'Spacing', 0,...
+                'BackgroundColor', 'w');
             % Status display
-            uicontrol(mainLayout, 'Style', 'text',...
+            uicontrol(octLayout, 'Style', 'text',...
                 'String', '',...
                 'FontSize', 16,...
                 'FontWeight', 'bold',...
@@ -296,74 +298,128 @@ classdef ChoroidApp < handle
             
             % Setup the image display
             obj.axHandle = axes(...
-                'Parent', uipanel(mainLayout, 'BackgroundColor', 'w'));
+                'Parent', uipanel(octLayout, 'BackgroundColor', 'w'));
             obj.imHandle = imagesc(obj.axHandle, obj.originalImage);
             colormap(obj.figHandle, gray);
             axis(obj.axHandle, 'equal', 'tight', 'off');
             hold(obj.axHandle, 'on');
 
             % Set up UI controls
-            uiLayout = uix.HBox('Parent', mainLayout,...
+            uiLayout = uix.VBox('Parent', mainLayout,...
                 'BackgroundColor', 'w');
             
             % UI for retinal layer segmentation
-            segmentLayout = uix.VBox('Parent', uiLayout,...
+            uix.Empty('Parent', uiLayout);
+            uicontrol(uiLayout, 'Style', 'text',...
+                'String', 'Retinal Layers:',...
+                'FontWeight', 'bold');
+            retinaLayout = uix.HBox('Parent', uiLayout,...
                 'BackgroundColor', 'w');
-            uicontrol(segmentLayout, 'Style', 'push',...
-                'String', 'Segment RPE and ILM',...
+            uicontrol(retinaLayout, 'Style', 'push',...
+                'String', 'Segment',...
                 'Callback', @obj.onSegmentRetina);
-            uicontrol(segmentLayout, 'Style', 'check',...
-                'String', 'Show RPE and ILM',...
+            uix.Empty('Parent', retinaLayout);
+            uicontrol(retinaLayout, 'Style', 'check',...
+                'String', 'Show',...
+                'TooltipString', 'Toggle display of layers (''r'')',...
                 'Tag', 'ShowRetina',...
                 'Callback', @obj.onShowRetinaSegmentation);
+            set(retinaLayout, 'Widths', [-1, -0.25, -0.75]);
+            widths = [-0.25, -0.5, -1];
 
             % UI for choroid parabola control points
-            controlLayout = uix.VBox('Parent', uiLayout,...
-                'BackgroundColor', 'w');
-            uicontrol(controlLayout, 'Style', 'text',...
+            uix.Empty('Parent', uiLayout);
+            uicontrol(uiLayout, 'Style', 'text',...
                 'String', 'Control Points:',...
                 'FontWeight', 'bold');
-            uicontrol(controlLayout, 'Style', 'push',...
+            pointLayout = uix.HBox('Parent', uiLayout,...
+                'BackgroundColor', 'w');
+            uicontrol(pointLayout, 'Style', 'push',...
                 'String', 'Add Point',...
                 'Tag', 'AddPts',...
                 'Callback', @obj.onAddCtrlPoint);
-            uicontrol(controlLayout, 'Style', 'push',...
+            uix.Empty('Parent', pointLayout);
+            uicontrol(pointLayout, 'Style', 'push',...
                 'String', 'Clear points',...
                 'Tag', 'ClearPts',...
                 'Callback', @obj.onClearCtrlPoints);
+            set(pointLayout, 'Widths', [-1, -0.25, -1]);
+            uicontrol(uiLayout, 'Style', 'push',...
+                'String', 'Use Histogram App',...
+                'Callback', @obj.onUseHistogramApp);
+            widths = cat(2, widths, [-0.5, -0.5, -1, -1]);
             
             % UI for fitting choroid
-            choroidLayout = uix.VBox('Parent', uiLayout,...
-                'BackgroundColor', 'w');
-            uicontrol(choroidLayout, 'Style', 'text',...
+            uix.Empty('Parent', uiLayout);
+            uicontrol(uiLayout, 'Style', 'text',...
                 'String', 'Choroid:',...
                 'FontWeight', 'bold');
+            choroidLayout = uix.HBox('Parent', uiLayout,...
+                'BackgroundColor', 'w');
             uicontrol(choroidLayout, 'Style', 'push',...
-                'String', 'Fit Choroid',...
+                'String', 'Fit',...
                 'Tag', 'FitChoroid',...
                 'Enable', 'off',...
                 'Callback', @obj.onFitChoroid);
+            uix.Empty('Parent', choroidLayout);
             uicontrol(choroidLayout, 'Style', 'check',...
-                'String', 'Show Choroid',...
+                'String', 'Show',...
+                'TooltipString', 'Toggle display of choroid (''c'')',...
                 'Tag', 'ShowChoroid',...
                 'Callback', @obj.onShowChoroid);
+            set(choroidLayout, 'Widths', [-1, -0.25, -0.75]);
+            widths = cat(2, widths, [-0.5, -0.5, -1]);
 
-            % UI for saving and exporting analysis
-            saveLayout = uix.VBox('Parent', uiLayout,...
+            % UI for saving and exporting analysis   
+            uix.Empty('Parent', uiLayout);
+            uicontrol(uiLayout, 'Style', 'text',...
+                'String', 'Export:', 'FontWeight', 'bold');         
+            nameLayout = uix.HBox('Parent', uiLayout,...
                 'BackgroundColor', 'w');
-            uicontrol(saveLayout, 'Style', 'text', 'String', 'OCT Name:');
-            uicontrol(saveLayout, 'Style', 'edit',...
+            uicontrol(nameLayout, 'Style', 'text', 'String', 'OCT Name:');
+            uicontrol(nameLayout, 'Style', 'edit',...
                 'String', '',...
                 'Tag', 'OCTName');
+            saveLayout = uix.HBox('Parent', uiLayout,...
+                'BackgroundColor', 'w');
             uicontrol(saveLayout, 'Style', 'push',...
-                'String', 'Save All',...
+                'String', 'Save Data',...
                 'Callback', @obj.onSaveAll);
             uicontrol(saveLayout, 'Style', 'push',...
                 'String', 'Save image',...
                 'Callback', @obj.onExportFigure);
+            uix.Empty('Parent', uiLayout);
+            widths = cat(2, widths, [-0.5, -0.5, -0.6, -1, -0.25]);
+            
 
-            set(uiLayout, 'Widths', [-1, -1, -1, -0.5]);
-            set(mainLayout, 'Heights', [-0.5, -6, -1.5]);
+            set(uiLayout, 'Heights', widths);
+            set(octLayout, 'Heights', [-0.5, -6]);
+            set(mainLayout, 'Widths', [-6, -1.5]);
+        end
+
+        function parseInput(obj, x)
+            % Get OCT image, other attributes if applicable
+            if isa(x, 'OCT')
+                if ~isempty(x.ControlPoints)
+                    selection = questdlg('Import existing control points?');
+                    if strcmp(selection, 'Yes')
+                        obj.addControlPoints(x.ControlPoints);
+                    end
+                end
+                im = x.octImage;
+            elseif ischar(x)
+                im = imread(x);
+            elseif isnumeric(x)
+                im = x;
+            else 
+                error('CHOROIDAPP:InvalidInput');
+            end
+
+            % Convert to grayscale if necessary
+            if numel(size(im)) == 3
+                im = rgb2gray(im);
+            end
+            obj.originalImage = im;
         end
     end
 

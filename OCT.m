@@ -1,6 +1,9 @@
 classdef OCT < handle
     % OCT
     %
+    % Description:
+    %   Represents features and analyses of a single OCT b-scan
+    %
     % Constructor:
     %   x = OCT(imageID, imagePath)
     %
@@ -13,6 +16,7 @@ classdef OCT < handle
     %   7Aug2018 - SSP - working version compiled from previous functions
     %   11Aug2018 - SSP - added crop function
     %   14Aug2018 - SSP - added reload option
+    %   2Jan2019 - SSP - changed edges to control points
     % ---------------------------------------------------------------------
 
     % Identifiers
@@ -27,7 +31,7 @@ classdef OCT < handle
         ILM = [];
         Choroid = [];
         ChoroidParams = [];
-        Edges = [];
+        ControlPoints = [];
         CropValues = [];
         Shift = [];
         Theta = [];
@@ -54,7 +58,7 @@ classdef OCT < handle
 
     % Features which may have been extracted from the image
     properties (Constant = true, Hidden = true)
-        FEATURES = {'rpe', 'ilm', 'choroid', 'parabola', 'edges',...
+        FEATURES = {'rpe', 'ilm', 'choroid', 'parabola', 'controlpoints',...
             'crop', 'shift', 'theta'};
     end
 
@@ -275,7 +279,7 @@ classdef OCT < handle
             obj.ChoroidParams = obj.fetch(obj.getPath('parabola'));
             obj.RPE = obj.fetch(obj.getPath('rpe'));
             obj.ILM = obj.fetch(obj.getPath('ilm'));
-            obj.Edges = obj.fetch(obj.getPath('edges'));
+            obj.ControlPoints = obj.fetch(obj.getPath('controlpoints'));
             obj.CropValues = obj.fetch(obj.getPath('crop'));
             obj.Shift = obj.fetch(obj.getPath('shift'));
             obj.Theta = obj.fetch(obj.getPath('theta'));

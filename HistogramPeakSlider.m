@@ -85,10 +85,15 @@ classdef HistogramPeakSlider < handle
             obj.addRPE(obj.appHandle.RPE);
             obj.addILM(obj.appHandle.ILM);
             obj.addChoroid(obj.appHandle.Choroid);
-            obj.storedPoints = [obj.appHandle.ControlPoints(:, 1),...
-                nan(size(obj.appHandle.ControlPoints, 1), 1),...
-                obj.appHandle.ControlPoints(:, 2)];
-            obj.plotStoredPoints();
+            if ~isempty(obj.appHandle.ControlPoints)
+                obj.storedPoints = [obj.appHandle.ControlPoints(:, 1),...
+                    nan(size(obj.appHandle.ControlPoints, 1), 1),...
+                    obj.appHandle.ControlPoints(:, 2)];
+                obj.plotStoredPoints();
+            end
+
+            addlistener(obj.appHandle,...
+                'Choroid', 'PostSet', @obj.onAppChangedChoroid);
         end
 
         
@@ -137,6 +142,13 @@ classdef HistogramPeakSlider < handle
                 'Tag', 'Choroid');
         end
     end
+
+    % Listener callback methods
+    methods (Access = private)
+        function onAppChangedChoroid(obj, ~, ~)
+            obj.addChoroid(obj.sliderValue);
+        end
+    end
     
     % Callback methods
     methods (Access = private)
@@ -163,7 +175,8 @@ classdef HistogramPeakSlider < handle
         end
 
         function onFindPeaks(obj, ~, ~)
-            [pkInd, trInd] = histogramPeaks(obj.octImage(:, round(obj.sliderValue)));
+            [pkInd, trInd] = histogramPeaks(...
+                obj.octImage(:, round(obj.sliderValue)), 'Thresh', 20);
             if ~isempty(obj.RPE)
                 pkInd(pkInd(:, 1) > obj.RPE(obj.sliderValue, 2), :) = [];
                 trInd(trInd(:, 1) > obj.RPE(obj.sliderValue, 2), :) = [];
