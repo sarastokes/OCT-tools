@@ -1,4 +1,4 @@
-function [newIm2, Theta] = alignImages(im1, im2, plotFlag, savePath)
+function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
     % ALIGNIMAGES
     % 
     % Description:
@@ -12,7 +12,8 @@ function [newIm2, Theta] = alignImages(im1, im2, plotFlag, savePath)
     %   savePath    If provided, saves .txt file of the rotation to image 2
     % Outputs:
     %   newIm2      Aligned image
-    %   Theta       Rotation factor used
+    %   Theta       Angle of rotation (imrotate)
+    %   Scale       Scale factor applied (imresize)
     %
     % References
     % https://www.mathworks.com/help/vision/examples/
@@ -20,6 +21,8 @@ function [newIm2, Theta] = alignImages(im1, im2, plotFlag, savePath)
     %
     % History:
     %   6Aug2018 - SSP
+    %   2Jan2019 - SSP - added more input image checking
+    %   3Jan2019 - SSP - changed output to include angle and scale
     % ---------------------------------------------------------------------
     if nargin < 4
         savePath = [];
@@ -30,21 +33,17 @@ function [newIm2, Theta] = alignImages(im1, im2, plotFlag, savePath)
     else
         assert(ismember(plotFlag, 0:2), 'Set plotFlag to 0, 1 or 2');
     end
-    if isa(im1, 'OCT')
-        im1 = im1.octImage;
-    end
-    
-    if isa(im2, 'OCT')
-        im2 = im2.octImage;
-    end
-    
+
+    im1 = checkImage(im1);
+    im2 = checkImage(im2);
+
     if plotFlag > 0
         figure();
         imshowpair(im1, im2);
         title('Original images');
     end
-    % IDENTIFY MATCHING FEATURES BETWEEN IMAGES
     
+    % IDENTIFY MATCHING FEATURES BETWEEN IMAGES
     pts1 = detectSURFFeatures(im1);
     pts2 = detectSURFFeatures(im2);
     
@@ -77,14 +76,7 @@ function [newIm2, Theta] = alignImages(im1, im2, plotFlag, savePath)
         legend('pts image 1', 'pts image 2');
     end
     
-    % SOLVE FOR SCALE AND ANGLE
-    Tinv  = tform.invert.T;
-    
-    ss = Tinv(2, 1);
-    sc = Tinv(1, 1);
-    Scale = sqrt(ss*ss + sc*sc);
-    Theta = -1 * (atan2(ss, sc)*180/pi);
-    fprintf('Scale = %.2f\nTheta = %.2f\n', Scale, Theta);
+    [Theta, Scale] = solveTransform(tform);
     
     % TRANSFORM IMAGE
     outputView = imref2d(size(im1));
@@ -97,9 +89,20 @@ function [newIm2, Theta] = alignImages(im1, im2, plotFlag, savePath)
     
     % SAVE OUTPUT
     if ~isempty(savePath)
-        if isempty(strfind(savePath, '_theta.txt')) %#ok
-            savePath = [savePath, '_theta.txt'];
-        end
-        dlmwrite(savePath, Theta);
-        fprintf('Saved to %s\n', savePath);
+        dlmwrite([savePath, '_theta.txt'], Theta);
+        dlmwrite([savePath, '_scale.txt'], Scale);
+        fprintf('Saved to %s\n\t and %s\n',... 
+            [savePath, '_theta.txt'], [savePath, '_scale.txt']);
     end
+
+end
+
+function im = checkImage(im)
+    if isa(im, 'OCT')
+        im = im.octImage;
+    end
+
+    if ndims(im) == 3
+        im = rgb2gray(im);
+    end
+end

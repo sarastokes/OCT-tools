@@ -12,11 +12,22 @@ classdef OCT < handle
     %   imagePath       Folder where image and data is stored, optional
     %                   If not provided, opens up UI to choose a folder
     %
+    % Methods:
+    %   obj.reload()
+    %   obj.crop()
+    %   obj.doAnalysis()
+    % Visualization methods:
+    %   obj.show()
+    %   obj.plotRatio()
+    %   obj.plotSizes()
+    %   obj.showSegmentation()
+    %
     % History:
     %   7Aug2018 - SSP - working version compiled from previous functions
     %   11Aug2018 - SSP - added crop function
     %   14Aug2018 - SSP - added reload option
     %   2Jan2019 - SSP - changed edges to control points
+    %   3Jan2019 - SSP - added scale property
     % ---------------------------------------------------------------------
 
     % Identifiers
@@ -35,6 +46,7 @@ classdef OCT < handle
         CropValues = [];
         Shift = [];
         Theta = [];
+        Scale = [];
     end
 
     % Analysis
@@ -59,7 +71,7 @@ classdef OCT < handle
     % Features which may have been extracted from the image
     properties (Constant = true, Hidden = true)
         FEATURES = {'rpe', 'ilm', 'choroid', 'parabola', 'controlpoints',...
-            'crop', 'shift', 'theta'};
+            'crop', 'shift', 'theta', 'scale'};
     end
 
     methods
@@ -101,7 +113,7 @@ classdef OCT < handle
                 assert(islogical(saveValues), 'Save values should be t/f');
             end
             
-            figure(); 
+            fh = figure(); 
             [~, cropValues] = imcrop(obj.octImage);
             
             % Return if no crop specified.
@@ -115,6 +127,7 @@ classdef OCT < handle
                 dlmwrite(str, cropValues);
                 fprintf('Wrote crop values to: %s\n', str);
             end
+            delete(fh);
         end
 
         function doAnalysis(obj)
@@ -245,7 +258,11 @@ classdef OCT < handle
                 octImage = obj.originalImage;
             end
             
-            % Rotate the image, if necessary
+            % Transform or rotate the image, if necessary
+            if ~isempty(obj.Scale)
+                octImage = imresize(octImage, obj.Scale);
+            end
+
             if ~isempty(obj.Theta)
                 octImage = imrotate(octImage, obj.Theta);
                 fprintf('Applied rotation of %.2f degrees\n', obj.Theta);
@@ -254,8 +271,8 @@ classdef OCT < handle
             % Crop the image, if necessary
             if ~isempty(obj.CropValues)
                 fprintf('Cropped by %u, %u\n',...
-                    round([size(octImage, 1) - obj.CropValues(3),...
-                           size(octImage, 2) - obj.CropValues(4)]));
+                    abs(round([size(octImage, 1) - obj.CropValues(3),...
+                           size(octImage, 2) - obj.CropValues(4)])));
                 octImage = imcrop(octImage, obj.CropValues);
             end
         end
@@ -283,6 +300,7 @@ classdef OCT < handle
             obj.CropValues = obj.fetch(obj.getPath('crop'));
             obj.Shift = obj.fetch(obj.getPath('shift'));
             obj.Theta = obj.fetch(obj.getPath('theta'));
+            obj.Scale = obj.fetch(obj.getPath('scale'));
         end
     end
 
