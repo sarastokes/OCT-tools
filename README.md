@@ -17,7 +17,7 @@ The code works best when all the images are in a single folder with numbers as f
 
 
 ### Dependencies
-This code was written in Matlab 2018 and requires the Bioinformatics, Computer Vision and Signal Processing toolboxes. All external dependencies are provided, except the free [GUI Layout Toolbox][guilayout], which can be installed from Matlab's Add-Ons window.
+This code was written in Matlab 2018 and requires the Bioinformatics, Computer Vision, Curve Fitting, Image Processing and Signal Processing toolboxes. All external dependencies are provided, except the free [GUI Layout Toolbox][guilayout], which can be installed from Matlab's Add-Ons window.
 
 ### References
 The initial ILM and RPE segmentation uses a simplified implementation of an algorithm introduced in:

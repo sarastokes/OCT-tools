@@ -34,6 +34,7 @@ classdef OCT < handle
     properties (SetAccess = private)
         imagePath
         imageID
+        refID
     end
 
     % Segmentation
@@ -91,6 +92,10 @@ classdef OCT < handle
             obj.load();
             
             obj.shiftedRatios = false;
+        end
+
+        function addReference(obj, refID)
+            obj.refID = refID;
         end
         
         function reload(obj)
@@ -181,7 +186,7 @@ classdef OCT < handle
     methods
         function show(obj, ax)
             % SHOW  Plot the OCT image (with rotation and crop)
-            if isempty(ax)
+            if nargin < 2
                 ax = axes('Parent', figure());
             end
             imagesc(ax, obj.octImage); colormap(gray);
@@ -190,28 +195,55 @@ classdef OCT < handle
             tightfig(gcf);
         end
         
-        function plotRatio(obj, smoothFac)
-            % PLOTRATIO
-            if nargin < 2
-                smoothFac = 10;
-            end
+        function ax = plotRatio(obj, varargin)
+            % PLOTRATIO  Plot the choroid:retina ratio
+            ip = inputParser();
+            ip.CaseSensitive = false;
+            addParameter(ip, 'Smooth', 10, @isnumeric);
+            addParameter(ip, 'ShowData', false, @islogical);
+            addParameter(ip, 'Color', rgb('light blue'),...
+                @(x) isvector(x) || ischar(x));
+            addParameter(ip, 'Axes', [], @ishandle);
+            parse(ip, varargin{:});
+            smoothFac = ip.Results.Smooth;
+
             if isempty(obj.choroidRatio)
                 obj.doAnalysis();
             end
 
             xpts = obj.getXPts();
-            figure(); hold on;
-            plot([0, max(xpts)], [1, 1], '--', 'Color', [0.3, 0.3, 0.3]);
+            if isempty(ip.Results.Axes)
+                ax = axes('Parent', figure('Name', [obj.imageName ' Choroid']));
+                h = plot(ax, [0, max(xpts)], [1, 1], '--',...
+                    'Color', [0.3, 0.3, 0.3], 'LineWidth', 0.75);
+                set(get(get(h, 'Annotation'), 'LegendInformation'),...
+                    'IconDisplayStyle', 'off'); 
+                
+                % title(ax, [obj.imageName, ' choroid thickness']);
+                set(ax, 'Box', 'off'); grid(ax, 'on');
+                ylabel(ax, 'choroid:retina ratio');
+                xlabel(ax, 'x-axis (pixels)');
+
+                figPos(ax.Parent, 0.7, 0.7);
+            else
+                ax = ip.Results.Axes;
+            end
+            hold(ax, 'on');
+
             % Raw data
-            plot(xpts, obj.choroidRatio, '.k', 'MarkerSize', 4);
+            if ip.Results.ShowData
+                h = plot(ax, xpts, obj.choroidRatio, '.',...
+                    'Color', hex2rgb('334de6'), 'MarkerSize', 4,...
+                    'Tag', 'Data');
+                set(get(get(h, 'Annotation'), 'LegendInformation'),...
+                    'IconDisplayStyle', 'off');
+            end
             % Smoothed data
-            plot(xpts, smooth(obj.choroidRatio, smoothFac),...
-                'b', 'LineWidth', 1.5);
-            xlim([0, max(xpts)]); ylim([0, 2]);
-            title([obj.imageName ' - Choroid Thickness']);
-            set(gca, 'Box', 'off'); grid on;
-            ylabel('choroid to retina thickness ratio');
-            xlabel('x-axis (pixels)');
+            plot(ax, xpts, smooth(obj.choroidRatio, smoothFac),...
+                'Color', ip.Results.Color, 'LineWidth', 1.5,...
+                'Tag', obj.imageName,...
+                'DisplayName', obj.imageName);
+            xlim(ax, [0, max(xpts)]); ylim(ax, [0, 2]);
         end
 
         function plotSizes(obj)

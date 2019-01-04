@@ -248,7 +248,11 @@ classdef HistogramPeakSlider < handle
                 case 'd'
                     obj.onDeleteLastPoint();
                 case 's'
-                    obj.onStorePoints();
+                    if isempty(evt.Modifier)
+                        obj.onStorePoints();
+                    elseif strcmp(evt.Modifier{1}, 'shift')
+                        obj.onSendPoints();
+                    end
                 case 'rightarrow'
                     newValue = obj.sliderValue + obj.getSteps(evt);
                     if newValue < get(obj.sliderHandle, 'Max')

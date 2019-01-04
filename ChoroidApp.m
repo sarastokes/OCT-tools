@@ -202,7 +202,7 @@ classdef ChoroidApp < handle
             % ONEXPORTFIGURE  Export image with any visible segmentation
             newAxes = exportFigure(obj.axHandle);
             [fname, fpath] = uiputfile('*.png');
-            print(newAxes.Parent, [fpath, filesep, fname], '-dpng', '-r600');
+            print(newAxes, [fpath, filesep, fname], '-dpng', '-r600');
         end
 
         function onSaveAll(obj, ~, ~)
