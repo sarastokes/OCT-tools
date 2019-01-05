@@ -28,6 +28,7 @@ classdef OCT < handle
     %   14Aug2018 - SSP - added reload option
     %   2Jan2019 - SSP - changed edges to control points
     %   3Jan2019 - SSP - added scale property
+    %   4Jan2019 - SSP - crop now happens before rotation and scaling
     % ---------------------------------------------------------------------
 
     % Identifiers
@@ -65,7 +66,7 @@ classdef OCT < handle
     end
 
     % Transient copy of the full original image to support lazy loading
-    properties (Transient = true, Hidden = true)
+    properties (Hidden = true, SetAccess = private)
         originalImage
     end
 
@@ -110,6 +111,25 @@ classdef OCT < handle
                 'Path value not in features list!');
             str = [obj.imagePath, filesep, obj.imageName, '_', x, '.txt'];
         end
+
+        function im = getSemiProcessedImage(obj, varargin)
+            ip = inputParser();
+            addParameter(ip, 'Crop', false, @islogical);
+            addParameter(ip, 'Scale', false, @islogical);
+            addParameter(ip, 'Rotate', false, @islogical);
+            parse(ip, varargin{:});
+
+            im = obj.fetchImage();
+            if ip.Results.Crop
+                im = obj.doCrop(im);
+            end
+            if ip.Results.Scale
+                im = obj.doScale(im);
+            end
+            if ip.Results.Rotate
+                im = obj.doRotate(im);
+            end
+        end
         
         function cropValues = crop(obj, saveValues)
             if nargin < 2
@@ -135,6 +155,17 @@ classdef OCT < handle
             delete(fh);
         end
 
+        function align(obj, cropFirst)
+            if isempty(obj.refID)
+                error('Set the reference OCT image ID number first');
+            end
+            ref = OCT(obj.refID, [imDir, filesep, 'raw']);
+            
+        end
+    end
+
+    % Analysis methods
+    methods 
         function doAnalysis(obj)
             % Determine the full x-axis
             xpts = obj.getXPts();
@@ -213,7 +244,9 @@ classdef OCT < handle
 
             xpts = obj.getXPts();
             if isempty(ip.Results.Axes)
-                ax = axes('Parent', figure('Name', [obj.imageName ' Choroid']));
+                fh = figure('Name', [obj.imageName, ' Choroid'],...
+                    'Renderer', 'painters');
+                ax = axes('Parent', fh);
                 h = plot(ax, [0, max(xpts)], [1, 1], '--',...
                     'Color', [0.3, 0.3, 0.3], 'LineWidth', 0.75);
                 set(get(get(h, 'Annotation'), 'LegendInformation'),...
@@ -224,7 +257,7 @@ classdef OCT < handle
                 ylabel(ax, 'choroid:retina ratio');
                 xlabel(ax, 'x-axis (pixels)');
 
-                figPos(ax.Parent, 0.7, 0.7);
+                figPos(fh, 0.7, 0.7);
             else
                 ax = ip.Results.Axes;
             end
@@ -262,18 +295,20 @@ classdef OCT < handle
             legend([p1, p2], {'Choroid', 'Retina'});
             title([obj.imageName ' - Choroid and Retina Sizes']);
             set(gca, 'Box', 'off'); grid on;
-            ylabel('Width (pixels)');
-            xlabel('x-axis (pixels)');
+            xlabel('x-axis (pixels)'); ylabel('Width (pixels)');
         end
         
         function showSegmentation(obj)
+            % SHOWSEGMENTATION  Show image with overlaid segmentation
             if isempty(obj.RPE)
                 return
             end
             obj.show(); hold on;
             plot(obj.RPE(:, 1), obj.RPE(:, 2), 'b');
             plot(obj.ILM(:, 1), obj.ILM(:, 2), 'b');
-            plot(obj.Choroid(:, 1), obj.Choroid(:, 2), 'r');
+            if ~isempty(obj.Choroid)
+                plot(obj.Choroid(:, 1), obj.Choroid(:, 2), 'r');
+            end
         end
     end
 
@@ -289,24 +324,11 @@ classdef OCT < handle
             else
                 octImage = obj.originalImage;
             end
-            
-            % Transform or rotate the image, if necessary
-            if ~isempty(obj.Scale)
-                octImage = imresize(octImage, obj.Scale);
-            end
 
-            if ~isempty(obj.Theta)
-                octImage = imrotate(octImage, obj.Theta);
-                fprintf('Applied rotation of %.2f degrees\n', obj.Theta);
-            end
-            
-            % Crop the image, if necessary
-            if ~isempty(obj.CropValues)
-                fprintf('Cropped by %u, %u\n',...
-                    abs(round([size(octImage, 1) - obj.CropValues(3),...
-                           size(octImage, 2) - obj.CropValues(4)])));
-                octImage = imcrop(octImage, obj.CropValues);
-            end
+            % Crop/rotate/transform, if necessary
+            octImage = obj.doCrop(octImage);
+            octImage = obj.doScale(octImage);
+            octImage = obj.doRotate(octImage);
         end
     end
 
@@ -319,6 +341,32 @@ classdef OCT < handle
             % Convert to grayscale if necessary
             if numel(size(im)) == 3
                 im = rgb2gray(im);
+            end
+        end
+        
+        function im = doCrop(obj, im)
+            % DOCROP  Crop the image, if necessary
+            if ~isempty(obj.CropValues)
+                im = imcrop(im, obj.CropValues);
+                fprintf('Cropped by %u, %u\n',...
+                    abs(round([size(im, 1) - obj.CropValues(3),...
+                               size(im, 2) - obj.CropValues(4)])));
+            end
+        end
+
+        function im = doScale(obj, im)
+            % DOSCALE  Scale the image, if necessary
+            if ~isempty(obj.Scale)
+                im = imresize(im, obj.Scale);
+                fprintf('Scaled by %.2g%%\n', 100 * obj.Scale);
+            end
+        end
+
+        function im = doRotate(obj, im)
+            % DOROTATE  Rotate the image, if necessary
+            if ~isempty(obj.Theta)
+                im = imrotate(im, obj.Theta);
+                fprintf('Applied rotation of %.2f degrees\n', obj.Theta);
             end
         end
 

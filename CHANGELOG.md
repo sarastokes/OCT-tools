@@ -1,5 +1,8 @@
 # CHANGELOG
 
+### 4Jan2019
+- Added `refID` property to `OCT` class for the image number of the reference OCT.
+
 ### 3Jan2019
 - Added `scale` property to `OCT` class and modified `analysis\alignImages.m` accordingly
 - Wrote `ChoroidRatioView` to interactively display choroid ratio while fitting boundary control points with `ChoroidApp`.

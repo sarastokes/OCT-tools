@@ -94,7 +94,6 @@ function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
         fprintf('Saved to %s\n\t and %s\n',... 
             [savePath, '_theta.txt'], [savePath, '_scale.txt']);
     end
-
 end
 
 function im = checkImage(im)
