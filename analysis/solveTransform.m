@@ -27,5 +27,5 @@ function [Angle, Scale] = solveTransform(tform)
 	Scale = sqrt(a*a + b*b);
 	Angle = -1 * (atan2(a, b) * 180/pi);
 
-	fprintf('Scale=%.2g\nAngle=%.2g\n', Scale, Angle);
+	fprintf('Scale=%.4g\nAngle=%.4g\n', Scale, Angle);
 end

@@ -93,6 +93,10 @@ classdef OCT < handle
             obj.load();
             
             obj.shiftedRatios = false;
+            
+            if ~isempty(obj.Choroid) && ~isempty(obj.RPE)
+                obj.doAnalysis();
+            end
         end
 
         function addReference(obj, refID)
@@ -230,10 +234,13 @@ classdef OCT < handle
             % PLOTRATIO  Plot the choroid:retina ratio
             ip = inputParser();
             ip.CaseSensitive = false;
+            ip.KeepUnmatched = true;
+            addParameter(ip, 'Relative', false, @islogical);
             addParameter(ip, 'Smooth', 10, @isnumeric);
             addParameter(ip, 'ShowData', false, @islogical);
             addParameter(ip, 'Color', rgb('light blue'),...
                 @(x) isvector(x) || ischar(x));
+            addParameter(ip, 'LineWidth', 1, @isnumeric);
             addParameter(ip, 'Axes', [], @ishandle);
             parse(ip, varargin{:});
             smoothFac = ip.Results.Smooth;
@@ -248,7 +255,8 @@ classdef OCT < handle
                     'Renderer', 'painters');
                 ax = axes('Parent', fh);
                 h = plot(ax, [0, max(xpts)], [1, 1], '--',...
-                    'Color', [0.3, 0.3, 0.3], 'LineWidth', 0.75);
+                    'Color', [0.3, 0.3, 0.3], 'LineWidth', 0.75,...
+                    'Tag', 'NormLine');
                 set(get(get(h, 'Annotation'), 'LegendInformation'),...
                     'IconDisplayStyle', 'off'); 
                 
@@ -263,20 +271,38 @@ classdef OCT < handle
             end
             hold(ax, 'on');
 
+            if ip.Results.Relative && ~isempty(obj.refID)
+                refOCT = OCT(obj.refID, obj.imagePath);
+                refRatio = refOCT.choroidRatio;
+                thisRatio = obj.choroidRatio;
+                if numel(refRatio) > numel(xpts)
+                    refRatio(numel(xpts)+1:end) = [];
+                elseif numel(xpts) > numel(refRatio)
+                    thisRatio(numel(refRatio)+1:end) = [];
+                    xpts = refOCT.getXPts();
+                end
+                plot(ax, xpts, smooth(thisRatio - refRatio, smoothFac),...
+                    'Color', ip.Results.Color, 'LineWidth', 1.5);
+                set(findobj(ax, 'Tag', 'NormLine'), 'YData', [0, 0]);
+                 ylim(ax, [-0.5, 0.5]);
+            else
+                plot(ax, xpts, smooth(obj.choroidRatio, smoothFac),...
+                    'Color', ip.Results.Color,...
+                    'LineWidth', ip.Results.LineWidth,...
+                    'Tag', obj.imageName, 'DisplayName', obj.imageName);
+                 ylim(ax, [0, 2]);
+            end
+
             % Raw data
-            if ip.Results.ShowData
+            if ip.Results.ShowData && ~ip.Results.Relative
                 h = plot(ax, xpts, obj.choroidRatio, '.',...
                     'Color', hex2rgb('334de6'), 'MarkerSize', 4,...
                     'Tag', 'Data');
                 set(get(get(h, 'Annotation'), 'LegendInformation'),...
                     'IconDisplayStyle', 'off');
             end
-            % Smoothed data
-            plot(ax, xpts, smooth(obj.choroidRatio, smoothFac),...
-                'Color', ip.Results.Color, 'LineWidth', 1.5,...
-                'Tag', obj.imageName,...
-                'DisplayName', obj.imageName);
-            xlim(ax, [0, max(xpts)]); ylim(ax, [0, 2]);
+            
+            xlim(ax, [0, max(xpts)]);
         end
 
         function plotSizes(obj)

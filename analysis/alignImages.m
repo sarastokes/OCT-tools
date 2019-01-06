@@ -87,6 +87,19 @@ function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
         title('Aligned images');
     end
     
+    if plotFlag > 0
+        figure(); imshowpair(im1, newIm2, 'diff');
+        title('Difference in aligned images');
+        colorbar(); colormap(bone);
+
+        figure(); hold on;
+        plot(1:size(im1, 2), sum((newIm2 - im1), 1)/256);
+        xlim([1, size(im1, 2)]);
+        xlabel('pixels'); ylabel('error');
+        title('Alignment errors');
+        figPos(gcf, 1, 0.75);
+    end
+    
     % SAVE OUTPUT
     if ~isempty(savePath)
         dlmwrite([savePath, '_theta.txt'], Theta);

@@ -32,12 +32,11 @@ classdef HistogramPeakSlider < handle
         imHandle
         histHandle
         histLine
-        sliderHandle
+
+        sliderValue
     end
     
-    properties (Dependent = true)
-        sliderValue
-        
+    properties (Dependent = true) 
         RPE
         ILM
         Choroid
@@ -92,7 +91,7 @@ classdef HistogramPeakSlider < handle
             addlistener(obj.appHandle, 'FitChoroid',...
                 @(src, evt)obj.onAppFitChoroid);
             addlistener(obj.appHandle, 'SegmentedRetinalLayers',...
-                @(src,evt)obj.onAppSegmentedRetinalLayers)
+                @(src,evt)obj.onAppSegmentedRetinalLayers);
             addlistener(obj.appHandle, 'ClosedApp',...
                 @(src, evt)obj.onAppClosed);
         end
@@ -100,9 +99,6 @@ classdef HistogramPeakSlider < handle
 
     % Dependent set/get methods
     methods
-        function sliderValue = get.sliderValue(obj)
-            sliderValue = round(get(obj.sliderHandle, 'Value'));
-        end
         
         function RPE = get.RPE(obj)
             RPE = obj.appHandle.RPE;
@@ -255,16 +251,19 @@ classdef HistogramPeakSlider < handle
                     end
                 case 'rightarrow'
                     newValue = obj.sliderValue + obj.getSteps(evt);
-                    if newValue < get(obj.sliderHandle, 'Max')
-                        set(obj.sliderHandle, 'Value', newValue);
+                    if newValue < size(obj.octImage, 2)
+                        obj.sliderValue = newValue;
                         obj.onSlide(); obj.onSlideFinished();
                     end
                 case 'leftarrow'
                     newValue = obj.sliderValue - obj.getSteps(evt);
-                    if newValue > get(obj.sliderHandle, 'Min')
-                        set(obj.sliderHandle, 'Value', newValue);
+                    if newValue > 1
+                        obj.sliderValue = newValue;
                         obj.onSlide(); obj.onSlideFinished();
                     end
+                case 'h'
+                    
+                    
             end
         end
     end
@@ -326,7 +325,7 @@ classdef HistogramPeakSlider < handle
                 line(obj.histHandle,...
                     'XData', [1, 255],...
                     'YData', repmat(obj.Choroid(obj.sliderValue, 2), [1, 2]),...
-                    'Color', rgb('light red'),...
+                    'Color', rgb('peach'),...
                     'LineWidth', 1,...
                     'Tag', 'Choroid');
             end
@@ -380,6 +379,7 @@ classdef HistogramPeakSlider < handle
     % User interface setup functions
     methods (Access = private)
         function createUI(obj)
+            % CREATEUI  Sets up the main user interface
             obj.figHandle = figure('Name', 'HistogramSlider',...
                 'Color', 'w',...
                 'NumberTitle', 'off',...
@@ -391,13 +391,10 @@ classdef HistogramPeakSlider < handle
             mainLayout = uix.HBox('Parent', obj.figHandle,...
                 'Spacing', 1, 'Padding', 2,...
                 'BackgroundColor', 'w');
+
+            obj.sliderValue = 1;  % Start at the leftmost pixel
             
-            octLayout = uix.VBox('Parent', mainLayout,...
-                'BackgroundColor', 'w');
-            obj.createImage(octLayout);
-            obj.createSlider(octLayout);            
-            set(octLayout, 'Heights', [-1, -0.1]);
-            
+            obj.createImage(mainLayout);    
             obj.createHistogram(mainLayout);
             
             uiLayout = uix.VBox('Parent', mainLayout,...
@@ -449,15 +446,15 @@ classdef HistogramPeakSlider < handle
             set(mainLayout, 'Widths', [-2.5, -1, -0.5]);
         end
 
-        function createSlider(obj, parentHandle)
-            % CREATESLIDER  Setup x-axis histogram slider
-            obj.sliderHandle = uicontrol(parentHandle,...
-                'Style', 'slider',...
-                'Min', 1, 'Max', size(obj.octImage, 2),...
-                'Value', 1,...
-                'Callback', @obj.onSlideFinished);
-            jSlider = findjobj(obj.sliderHandle);
-            set(jSlider, 'AdjustmentValueChangedCallback', @obj.onSlide);
+        function createImage(obj, parentHandle)
+            % CREATEIMAGE  Plot OCT image
+            obj.axHandle = axes('Parent', parentHandle);
+            obj.imHandle = imagesc(obj.axHandle, obj.octImage);
+            colormap(obj.figHandle, gray);
+            axis(obj.axHandle, 'equal', 'tight', 'off');
+            hold(obj.axHandle, 'on');      
+            
+            % Mark pixel currently shown in 1D histogram
             line(1, size(obj.imHandle.CData, 1),...
                 'Parent', obj.axHandle,...
                 'Marker', '^', 'LineStyle', 'none',...
@@ -468,15 +465,6 @@ classdef HistogramPeakSlider < handle
                 'Marker', 'v', 'LineStyle', 'none',...
                 'Color', rgb('peach'), 'MarkerFaceColor', rgb('peach'),...
                 'Tag', 'SliderPoint');
-        end
-
-        function createImage(obj, parentHandle)
-            % CREATEIMAGE  Plot OCT image
-            obj.axHandle = axes('Parent', parentHandle);
-            obj.imHandle = imagesc(obj.axHandle, obj.octImage);
-            colormap(obj.figHandle, gray);
-            axis(obj.axHandle, 'equal', 'tight', 'off');
-            hold(obj.axHandle, 'on');            
         end
 
         function createHistogram(obj, parentHandle)
