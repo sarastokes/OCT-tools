@@ -4,6 +4,7 @@
 - User interface changes for `HistogramPeakSlider`: removed physical slider bc arrow keys were easier
 - If segmentation exists, instatiating an `OCT` object automatically runs `OCT.doAnalysis`.
 - Relative choroid ratio option for `OCT.plotRatio()` to compare choroid ratio to a reference OCT, if exists.
+- Fixed application of `Shift` property for non-relative `OCT.plotRatio()`
 
 ### 4Jan2019
 - Added `refID` property to `OCT` class for the image number of the reference OCT.

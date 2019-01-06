@@ -99,13 +99,16 @@ classdef OCT < handle
             end
         end
 
-        function addReference(obj, refID)
+        function addRef(obj, refID)
             obj.refID = refID;
         end
         
         function reload(obj)
             % RELOAD  Reload from .txt files
             obj.load();
+            if ~isempty(obj.RPE) && ~isempty(obj.Choroid)
+                obj.doAnalysis();
+            end
         end
 
         function str = getPath(obj, x)
@@ -158,14 +161,6 @@ classdef OCT < handle
             end
             delete(fh);
         end
-
-        function align(obj, cropFirst)
-            if isempty(obj.refID)
-                error('Set the reference OCT image ID number first');
-            end
-            ref = OCT(obj.refID, [imDir, filesep, 'raw']);
-            
-        end
     end
 
     % Analysis methods
@@ -187,21 +182,33 @@ classdef OCT < handle
             obj.retinaSize = abs(iRPE - iILM);
             % Ratio of choroid size to retina size
             obj.choroidRatio = obj.choroidSize./obj.retinaSize;
+            
+            % Shift, if necessary
+            % if ~isempty(obj.Shift)
+            %     obj.choroidRatio = circshift(obj.choroidRatio, -obj.Shift);
+            %     if obj.Shift > 0
+            %         obj.choroidRatio(end-abs(obj.Shift):end) = NaN;
+            %     elseif obj.Shift < 0
+            %         obj.choroidRatio(1:obj.Shift) = NaN;
+            %     end
+            % end
         end
 
-        function xpts = getXPts(obj)
-            % GETXPTS
+        function xpts = getXPts(obj, doShift)
+            % GETXPTS  Get image x-axis, shifted or unshifted
+            if nargin < 2
+                doShift = false;
+            end
             if ~isempty(obj.RPE) && ~isempty(obj.ILM)
                 x_min = min([obj.RPE(:, 1); obj.ILM(:, 1)]);
                 x_max = max([obj.RPE(:, 1); obj.ILM(:, 1)]);
                 xpts = x_min:x_max;
-                
-                if ~isempty(obj.Shift)
-                    xpts = xpts + obj.Shift;
-                    fprintf('Applying shift of %u pixels\n', obj.Shift);
-                end
             else
                 xpts = [];
+            end
+            if doShift && ~isempty(obj.Shift)
+                xpts = xpts + obj.Shift;
+                fprintf('Applying shift of %u pixels\n', obj.Shift);
             end
         end
         
@@ -212,7 +219,7 @@ classdef OCT < handle
             if isempty(obj.choroidRatio)
                 obj.doAnalysis();
             end
-            igor = [obj.getXPts', smooth(obj.choroidRatio, smoothFac)];
+            igor = [obj.getXPts(true)', smooth(obj.choroidRatio, smoothFac)];
             openvar('igor');
         end
     end
@@ -249,12 +256,12 @@ classdef OCT < handle
                 obj.doAnalysis();
             end
 
-            xpts = obj.getXPts();
+            xpts = obj.getXPts(true);
             if isempty(ip.Results.Axes)
                 fh = figure('Name', [obj.imageName, ' Choroid'],...
                     'Renderer', 'painters');
                 ax = axes('Parent', fh);
-                h = plot(ax, [0, max(xpts)], [1, 1], '--',...
+                h = plot(ax, [min(xpts), max(xpts)], [1, 1], '--',...
                     'Color', [0.3, 0.3, 0.3], 'LineWidth', 0.75,...
                     'Tag', 'NormLine');
                 set(get(get(h, 'Annotation'), 'LegendInformation'),...
@@ -280,6 +287,7 @@ classdef OCT < handle
                 elseif numel(xpts) > numel(refRatio)
                     thisRatio(numel(refRatio)+1:end) = [];
                     xpts = refOCT.getXPts();
+                    
                 end
                 plot(ax, xpts, smooth(thisRatio - refRatio, smoothFac),...
                     'Color', ip.Results.Color, 'LineWidth', 1.5);
@@ -311,7 +319,7 @@ classdef OCT < handle
                 obj.doAnalysis();
             end
 
-            xpts = obj.getXPts();
+            xpts = obj.getXPts(true);
             figure(); hold on;
             plot(xpts, obj.choroidSize, '.k', 'MarkerSize', 3);
             p1 = plot(xpts, smooth(obj.choroidSize, 8), 'b', 'LineWidth', 1);
