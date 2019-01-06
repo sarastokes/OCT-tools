@@ -13,7 +13,7 @@ classdef OCT < handle
     %                   If not provided, opens up UI to choose a folder
     %
     % Methods:
-    %   obj.reload()
+    %   obj.update()
     %   obj.crop()
     %   obj.doAnalysis()
     % Visualization methods:
@@ -90,7 +90,7 @@ classdef OCT < handle
             fprintf('image path: %s\n', obj.imagePath);
 
             obj.originalImage = obj.fetchImage();
-            obj.load();
+            obj.pull();
             
             obj.shiftedRatios = false;
             
@@ -102,21 +102,9 @@ classdef OCT < handle
         function addRef(obj, refID)
             obj.refID = refID;
         end
-        
-        function reload(obj)
-            % RELOAD  Reload from .txt files
-            obj.load();
-            if ~isempty(obj.RPE) && ~isempty(obj.Choroid)
-                obj.doAnalysis();
-            end
-        end
 
-        function str = getPath(obj, x)
-            % GETPATH  Returns path of saved feature .txt file
-            x = lower(x);
-            assert(ismember(x, obj.FEATURES),...
-                'Path value not in features list!');
-            str = [obj.imagePath, filesep, obj.imageName, '_', x, '.txt'];
+        function update(obj)
+            obj.pull();
         end
 
         function im = getSemiProcessedImage(obj, varargin)
@@ -210,6 +198,18 @@ classdef OCT < handle
                 xpts = xpts + obj.Shift;
                 fprintf('Applying shift of %u pixels\n', obj.Shift);
             end
+        end
+
+        function saveJSON(obj)
+            % SAVEJSON  Store features as a single .json file
+            warning('off', 'MATLAB:structOnObject');
+            S = struct(obj);
+            S = rmfield(S, {'choroidSize', 'retinaSize', 'choroidRatio'});
+            S = rmfield(S, {'shiftedRatios', 'FEATURES'});
+            S = rmfield(S, {'octImage', 'originalImage', 'imageName'});
+            str = savejson(S);
+            savejson('', S, [obj.imagePath, filesep, obj.imageName, '.json']);
+            warning('on', 'MATLAB:structOnObject');
         end
         
         function igor = igor(obj, smoothFac)
@@ -313,23 +313,34 @@ classdef OCT < handle
             xlim(ax, [0, max(xpts)]);
         end
 
-        function plotSizes(obj)
+        function plotSizes(obj, ax)
             % PLOTRATIO  Plot raw sizes of choroid and retina
             if isempty(obj.choroidRatio)
                 obj.doAnalysis();
             end
 
             xpts = obj.getXPts(true);
-            figure(); hold on;
-            plot(xpts, obj.choroidSize, '.k', 'MarkerSize', 3);
-            p1 = plot(xpts, smooth(obj.choroidSize, 8), 'b', 'LineWidth', 1);
-            plot(xpts, obj.retinaSize, '.k', 'MarkerSize', 3);
-            p2 = plot(xpts, smooth(obj.retinaSize, 8), 'r', 'LineWidth', 1);
-            xlim([0, max(xpts)]);
-            legend([p1, p2], {'Choroid', 'Retina'});
-            title([obj.imageName ' - Choroid and Retina Sizes']);
-            set(gca, 'Box', 'off'); grid on;
-            xlabel('x-axis (pixels)'); ylabel('Width (pixels)');
+            
+            if nargin < 2
+                ax = axes('Parent', figure('Renderer', 'painters'),...
+                    'Box', 'off', 'XLim', [0, max(xpts)]); 
+                hold(ax, 'on'); 
+                grid(ax, 'on');                
+                xlabel(ax, 'x-axis (pixels)'); 
+                ylabel(ax, 'Width (pixels)');
+                
+                title(ax, [obj.imageName ' - Choroid and Retina Sizes']);
+            end
+
+            p1 = plot(ax, xpts, smooth(obj.choroidSize, 10),...
+                'b', 'LineWidth', 1, 'Tag', [obj.imageName, '_Choroid']);
+            p2 = plot(ax, xpts, smooth(obj.retinaSize, 10),...
+                'r', 'LineWidth', 1, 'Tag', [obj.imageName, '_RPE']);
+            
+            if nargin < 2
+                legend([p1, p2], {'Choroid', 'Retina'});
+            end
+            
         end
         
         function showSegmentation(obj)
@@ -366,6 +377,7 @@ classdef OCT < handle
         end
     end
 
+    % Private image processing methods
     methods (Access = private)
         function im = fetchImage(obj)
             % FETCHIMAGE  Read image from file
@@ -403,8 +415,47 @@ classdef OCT < handle
                 fprintf('Applied rotation of %.2f degrees\n', obj.Theta);
             end
         end
+    end
 
-        function load(obj)
+    % Private IO methods
+    methods (Access = private)
+            
+        function pull(obj)
+            % RELOAD  Reload from .json or .txt files
+            hasJSON = obj.loadJSON();
+            if ~hasJSON
+                disp('Loading .txt files instead');
+                obj.loadTXT();
+            end
+            if ~isempty(obj.RPE) && ~isempty(obj.Choroid)
+                obj.doAnalysis();
+            end
+        end
+
+        function tf = loadJSON(obj)
+            % LOADJSON  Load a .json file
+            jsonPath = [obj.imagePath, filesep, obj.imageName, '.json'];
+            if ~exist(jsonPath, 'file')
+                str = strsplit(jsonPath, filesep);
+                fprintf('Did not find file %s\n', str{end});
+                tf = false;
+            else
+                S = loadjson(jsonPath);
+                tf = true;
+                
+                assert(obj.imageID == S.imageID, 'Image ID numbers do not match!');
+
+                obj.refID = S.refID;
+                obj.RPE = S.RPE; obj.ILM = S.ILM;
+                obj.Shift = S.Shift; obj.Theta = S.Theta; obj.Scale = S.Scale;
+                obj.CropValues = S.CropValues;
+                obj.ControlPoints = S.ControlPoints;
+                obj.ChoroidParams = S.ChoroidParams;
+                obj.Choroid = S.Choroid;
+            end
+        end
+
+        function loadTXT(obj)
             % LOAD  Load parameters from file, if they exist
             obj.Choroid = obj.fetch(obj.getPath('choroid'));
             obj.ChoroidParams = obj.fetch(obj.getPath('parabola'));
@@ -415,6 +466,14 @@ classdef OCT < handle
             obj.Shift = obj.fetch(obj.getPath('shift'));
             obj.Theta = obj.fetch(obj.getPath('theta'));
             obj.Scale = obj.fetch(obj.getPath('scale'));
+        end
+        
+        function str = getPath(obj, x)
+            % GETPATH  Returns path of saved feature .txt file
+            x = lower(x);
+            assert(ismember(x, obj.FEATURES),...
+                'Path value not in features list!');
+            str = [obj.imagePath, filesep, obj.imageName, '_', x, '.txt'];
         end
     end
 

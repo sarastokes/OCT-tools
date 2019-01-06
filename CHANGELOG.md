@@ -1,5 +1,8 @@
 # CHANGELOG
 
+### 6Jan2019
+- Added option to `OCT` class save as a `.json` file. This will replace the many `.txt` files previously used for each parameter.
+
 ### 5Jan2019
 - User interface changes for `HistogramPeakSlider`: removed physical slider bc arrow keys were easier
 - If segmentation exists, instatiating an `OCT` object automatically runs `OCT.doAnalysis`.

@@ -12,7 +12,7 @@ The code works best when all the images are in a single folder with numbers as f
 6. Fit the control points marking the choroid-sclera boundary with a parabola.
 7. Steps 5 and 6 are usually an iterative process completed when enough control points are added to correctly fit the choroid-sclera boundary. 
 10. Provide a name for the exported data (works best if this includes the image ID number like `im1`, `im2`, etc). This saves .txt files of the extracted boundaries, control points and fit parameters. The `OCT` class properties are populated by searching for these files.
-11. To compare two images, use `compareChoroids.m`. This function plots the two choroids and optionally computes an x-axis shift value to align the two foveal pits. The alignment is just a simple registration of maximum values.
+11. To compare two images, use `compareChoroids.m`. This function plots the two choroids and optionally computes an x-axis shift value to align the two foveal pits. The alignment is just a simple registration of maximum values. Alternatively, you can use the `OCT.plotRatio()` to add multiple choroid ratios to a single plot.
 
 
 
@@ -23,6 +23,7 @@ This code was written in Matlab 2018 and requires the Bioinformatics, Computer V
 The initial ILM and RPE segmentation uses a simplified implementation of an algorithm introduced in:
 
 Chiu, S.J., Li, X.T., Nicholas, P., Toth, C.A., Izatt, J.A., Farsiu, S. (2010) Automatic segmentation of seven retinal layers in SDOCT images congruent with expert manual segmentation. *Optics Express*, 18(18), 19413-19428
+
 
 [guilayout]: <https://www.mathworks.com/matlabcentral/fileexchange/47982-gui-layout-toolbox>
 [neitzlab]: <http://www.neitzvision.com/>
