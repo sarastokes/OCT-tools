@@ -110,8 +110,9 @@ function [newIm2, Theta, Scale] = alignImages(oct1, oct2, varargin)
         fh = figure();
         imshowpair(im1, newIm2);
         title(sprintf('%s and %s alignment', oct1.imageName, oct2.imageName));
-        print(fh, sprintf('%s%s_%s_alignment.png', oct2.imagePath, oct1.imageName,...
-            oct2.imageName, oct2.imageName), '-dpng', '-r600');
+        print(fh, sprintf('%s%s_%s_alignment.png',...
+            oct2.imagePath, oct1.imageName, oct2.imageName),...
+            '-dpng', '-r600');
     end
     
     % Save the output
