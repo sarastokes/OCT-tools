@@ -1,18 +1,20 @@
-function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
+function [newIm2, Theta, Scale] = alignImages(oct1, oct2, varargin)
     % ALIGNIMAGES
     % 
     % Description:
     %   Align OCT images of the same eye
     %
     % Syntax:
-    %   [newImg, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
+    %   [newImg, Theta, Scale] = alignImages(im1, im2, varargin)
     %
     % Inputs:
     %   im1         First image
     %   im2         Second image, this one will be rotated/translated
-    % Optional inputs:
-    %   plotFlag    0 = none, 1 = final images (default), 2 = all images
-    %   savePath    If provided, saves rotation to image 2 as .json
+    % Optional key/value inputs:
+    %   PlotType    0 = none, 1 = final images (default), 2 = all images
+    %   Save        If provided, saves rotation to image 2 as .json
+    %   Clip        Points to clip from start + end of each image
+    %                 (default = [0, 0])
     % Outputs:
     %   newIm2      Aligned image
     %   Theta       Angle of rotation (imrotate)
@@ -27,22 +29,26 @@ function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
     %   2Jan2019 - SSP - added more input image checking
     %   3Jan2019 - SSP - changed output to include angle and scale
     % ---------------------------------------------------------------------
-    if nargin < 4
-        savePath = [];
-    elseif islogical(savePath) && isa(im2, 'OCT')
-        savePath = [im2.imagePath, im2.imageName];
-    end
+
+    ip = inputParser();
+    ip.CaseSensitive = false;
+    addParameter(ip, 'PlotType', 1, @(x) ismember(x, 1:3));
+    addParameter(ip, 'Save', false, @islogical);
+    addParameter(ip, 'Clip', [0, 0], @isnumeric);
+    parse(ip, varargin{:});
+
+    plotType = ip.Results.PlotType;
+    clipValues = round(ip.Results.Clip);
+
+    im1 = checkImage(oct1);
+    im2 = checkImage(oct2);
     
-    if nargin < 3
-        plotFlag = 1;
-    else
-        assert(ismember(plotFlag, 0:2), 'Set plotFlag to 0, 1 or 2');
+    if nnz(clipValues) > 0
+        im1 = im1(:, 1+clipValues(1):end-clipValues(2));
+        im2 = im2(:, 1+clipValues(1):end-clipValues(2));
     end
 
-    im1 = checkImage(im1);
-    im2 = checkImage(im2);
-
-    if plotFlag > 0
+    if plotType > 0
         figure();
         imshowpair(im1, im2);
         title('Original images');
@@ -63,7 +69,7 @@ function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
     matched2 = validPts2(indexPairs(:, 2));
     
     % Show putative point matches
-    if plotFlag == 2
+    if plotType == 2
         figure();
         showMatchedFeatures(im1, im2, matched1, matched2);
         title('Putatively matched points (including outliers)');
@@ -74,7 +80,7 @@ function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
         matched2, matched1, 'similarity');
     
     % Display the matching points used in the computation
-    if plotFlag == 2
+    if plotType == 2
         figure();
         showMatchedFeatures(im1, im2, inlier1, inlier2);
         title('Matching points (inliers only)');
@@ -86,40 +92,33 @@ function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
     % Transform image
     outputView = imref2d(size(im1));
     newIm2 = imwarp(im2, tform, 'OutputView', outputView);
-    if plotFlag > 0
-        figure();
-        imshowpair(im1, newIm2);
-        title('Aligned images');
-    end
-    
-    if plotFlag > 0
+    if plotType > 0
+
         figure(); imshowpair(im1, newIm2, 'diff');
-        title('Difference in aligned images');
+        title(sprintf('Difference in %s and %s alignment',...
+            oct1.imageName, oct2.imageName));
         colorbar(); colormap(bone);
 
         figure(); hold on;
-        plot(1:size(im1, 2), sum((newIm2 - im1), 1)/256);
+        plot(1:size(im1, 2), sum((newIm2 - im1), 1)/256,...
+            'LineWidth', 1, 'Color', hex2rgb('ff4040'));
         xlim([1, size(im1, 2)]);
         xlabel('pixels'); ylabel('error');
         title('Alignment errors');
-        figPos(gcf, 1, 0.75);
+        figPos(gcf, 0.8, 0.6);
+        
+        fh = figure();
+        imshowpair(im1, newIm2);
+        title(sprintf('%s and %s alignment', oct1.imageName, oct2.imageName));
+        print(fh, sprintf('%s%s_%s_alignment.png', oct2.imagePath, oct1.imageName,...
+            oct2.imageName, oct2.imageName), '-dpng', '-r600');
     end
     
     % Save the output
-    if ~isempty(savePath)
-        jsonPath = [savePath, '.json'];
-        if exist(jsonPath, 'file')
-            S = loadjson(jsonPath);
-            S.Scale = Scale; S.Theta = Theta;
-        else
-            im2.Theta = Theta; im2.Scale = Scale;
-            im2.saveJSON();
-            dlmwrite([savePath, '_theta.txt'], Theta);
-            dlmwrite([savePath, '_scale.txt'], Scale);
-            fprintf('Saved to %s\n\t and %s\n',... 
-                [savePath, '_theta.txt'], [savePath, '_scale.txt']);
-        end
-        savejson('', S, jsonPath);
+    if ip.Results.Save
+        oct2.update();
+        oct2.Theta = Theta; oct2.Scale = Scale;
+        oct2.saveJSON();
     end
 end
 

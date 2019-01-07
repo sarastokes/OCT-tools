@@ -40,8 +40,8 @@ function xShift = alignILM(refOCT, OCT, varargin)
     clipValues = round(ip.Results.Clip);
 
     % Get ILMs and smooth pixellation.
-    refILM = smooth(refOCT.ILM(1+clipValues:end-clipValues, 2), 10);
-    ILM = smooth(OCT.ILM(1+clipValues:end-clipValues, 2), 10);
+    refILM = smooth(refOCT.ILM(1+clipValues(1):end-clipValues(2), 2), 10);
+    ILM = smooth(OCT.ILM(1+clipValues(1):end-clipValues(2), 2), 10);
 
     % Compute lag of longer signal
     [corrILM, lag] = xcorr(ILM, refILM);
