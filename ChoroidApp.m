@@ -44,6 +44,8 @@ classdef ChoroidApp < handle
     properties (SetAccess = private)
         originalImage
         imageName
+        imagePath
+
         figHandle
         axHandle
         imHandle
@@ -198,6 +200,25 @@ classdef ChoroidApp < handle
             end
             obj.showByTag('Choroid', action);
         end
+
+        function onChangeCMap(obj, src, ~)
+            if strcmp(get(src, 'Tag'), 'gray')
+                colormap(obj.figHandle, parula);
+                set(src, 'Tag', 'parula');
+            else
+                colormap(obj.figHandle, gray);
+                set(src, 'Tag', 'gray');
+            end
+        end
+
+        function onReloadImage(obj, ~, ~)
+            x = OCT(str2double(obj.imageName(3:end)), obj.imagePath);
+            obj.originalImage = x.octImage;
+            if ndims(obj.originalImage) > 3
+                obj.originalImage = rgb2gray(obj.originalImage);
+            end
+            set(obj.imHandle, 'CData', obj.originalImage);
+        end
        
         function onExportFigure(obj, ~, ~)
             % ONEXPORTFIGURE  Export image with any visible segmentation
@@ -335,6 +356,19 @@ classdef ChoroidApp < handle
             % Set up UI controls
             uiLayout = uix.VBox('Parent', mainLayout,...
                 'BackgroundColor', 'w');
+
+            % UI for image control
+            uix.Empty('Parent', uiLayout);
+            imageLayout = uix.HBox('Parent', uiLayout,...
+                'BackgroundColor', 'w');
+            uicontrol(imageLayout, 'Style', 'push',...
+                'String', 'Reload image',...
+                'Callback', @obj.onReloadImage);
+            uicontrol(imageLayout, 'Style', 'push',...
+                'String', 'Colormap',...
+                'Tag', 'gray',...
+                'Callback', @obj.onChangeCMap);
+            widths = [-0.25, -1];
             
             % UI for retinal layer segmentation
             uix.Empty('Parent', uiLayout);
@@ -353,7 +387,7 @@ classdef ChoroidApp < handle
                 'Tag', 'ShowRetina',...
                 'Callback', @obj.onShowRetinaSegmentation);
             set(retinaLayout, 'Widths', [-1, -0.25, -0.75]);
-            widths = [-0.25, -0.5, -1];
+            widths = cat(2, widths, [-0.25, -0.5, -1]);
 
             % UI for choroid parabola control points
             uix.Empty('Parent', uiLayout);
@@ -435,6 +469,7 @@ classdef ChoroidApp < handle
 
             tf = false;
             obj.imageName = '';  % Blank unless provided by OCT class
+            obj.imagePath = '';
             if isa(x, 'OCT')
                 if ~isempty(x.ControlPoints)
                     selection = questdlg('Import existing control points?');
@@ -444,7 +479,7 @@ classdef ChoroidApp < handle
                 end
                 im = x.octImage;
                 obj.imageName = x.imageName;
-                cd(x.imagePath);
+                obj.imagePath = x.imagePath;
             elseif ischar(x)
                 im = imread(x);
             elseif isnumeric(x)
@@ -455,7 +490,7 @@ classdef ChoroidApp < handle
             end
 
             % Convert to grayscale if necessary
-            if numel(size(im)) == 3
+            if ndims(im) == 3
                 im = rgb2gray(im);
             end
             obj.originalImage = im;

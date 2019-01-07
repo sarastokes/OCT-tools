@@ -1,5 +1,8 @@
 # CHANGELOG
 
+### 7Jan2019
+- Added image reload to `ChoroidApp.m` and `OCT\update()`
+
 ### 6Jan2019
 - Added option to `OCT` class save as a `.json` file. This will replace the many `.txt` files previously used for each parameter.
 - New function `alignILM.m` to calculate the x-axis shift of one OCT image to match the reference image.

@@ -89,7 +89,6 @@ classdef OCT < handle
             end
             fprintf('image path: %s\n', obj.imagePath);
 
-            obj.originalImage = obj.fetchImage();
             obj.pull();
             
             if ~isempty(obj.Choroid) && ~isempty(obj.RPE)
@@ -429,11 +428,13 @@ classdef OCT < handle
     methods (Access = private)
             
         function pull(obj)
-            % RELOAD  Reload from .json or .txt files
+            % RELOAD  Reload image and data from .json files
+            obj.originalImage = obj.fetchImage();
             hasJSON = obj.loadJSON();
             if ~hasJSON
-                disp('Loading .txt files instead');
-                obj.loadTXT();
+                obj.saveJSON();
+                % disp('Loading .txt files instead');
+                % obj.loadTXT();
             end
             if ~isempty(obj.RPE) && ~isempty(obj.Choroid)
                 obj.doAnalysis();
