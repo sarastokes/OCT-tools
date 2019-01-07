@@ -136,6 +136,9 @@ classdef ChoroidRatioView < handle
 				'DefaultUicontrolBackgroundColor', 'w',...
 				'KeyPressFcn', @obj.onKeyPress);
 			figPos(fh, 0.5, 0.5);
+			pos = get(fh, 'Position');
+			scsz = get(0, 'ScreenSize');
+			set(fh, 'Position', [scsz(1)+100, pos(2:end)]);
 
 			obj.axHandle = axes('Parent', fh,...
 				'Tag', 'RatioAxes');

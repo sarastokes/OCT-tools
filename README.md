@@ -20,9 +20,17 @@ The code works best when all the images are in a single folder with numbers as f
 This code was written in Matlab 2018 and requires the Bioinformatics, Computer Vision, Curve Fitting, Image Processing and Signal Processing toolboxes.
 
 ### References
+Two external Matlab toolboxes are included: [GUI Layout Toolbox][guilayout] and [jsonlab1.5][jsonlab].
+
 The initial ILM and RPE segmentation uses a simplified implementation of an algorithm introduced in:
 
 Chiu, S.J., Li, X.T., Nicholas, P., Toth, C.A., Izatt, J.A., Farsiu, S. (2010) Automatic segmentation of seven retinal layers in SDOCT images congruent with expert manual segmentation. *Optics Express*, 18(18), 19413-19428
 
+The image alignment is MATLAB's code based on:
+
+Bay, H., Ess, A., Tuytelaars, T., Van Gool, L. (2008) SURF: Speeded up robust features. *Computer Vision and Image Understanding*, 110(3), 346-359 
+
 
 [neitzlab]: <http://www.neitzvision.com/>
+[jsonlab]: <https://github.com/fangq/jsonlab>
+[guilayout]: <https://www.mathworks.com/matlabcentral/fileexchange/47982-gui-layout-toolbox>

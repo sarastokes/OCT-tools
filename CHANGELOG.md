@@ -2,6 +2,8 @@
 
 ### 6Jan2019
 - Added option to `OCT` class save as a `.json` file. This will replace the many `.txt` files previously used for each parameter.
+- New function `alignILM.m` to calculate the x-axis shift of one OCT image to match the reference image.
+- Two new plotting functions: `util\plotRPE.m` and `util\plotILM.m`
 
 ### 5Jan2019
 - User interface changes for `HistogramPeakSlider`: removed physical slider bc arrow keys were easier

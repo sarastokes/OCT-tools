@@ -4,12 +4,15 @@ function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
     % Description:
     %   Align OCT images of the same eye
     %
+    % Syntax:
+    %   [newImg, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
+    %
     % Inputs:
     %   im1         First image
     %   im2         Second image, this one will be rotated/translated
     % Optional inputs:
     %   plotFlag    0 = none, 1 = final images (default), 2 = all images
-    %   savePath    If provided, saves .txt file of the rotation to image 2
+    %   savePath    If provided, saves rotation to image 2 as .json
     % Outputs:
     %   newIm2      Aligned image
     %   Theta       Angle of rotation (imrotate)
@@ -26,6 +29,8 @@ function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
     % ---------------------------------------------------------------------
     if nargin < 4
         savePath = [];
+    elseif islogical(savePath) && isa(im2, 'OCT')
+        savePath = [im2.imagePath, im2.imageName];
     end
     
     if nargin < 3
@@ -43,7 +48,7 @@ function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
         title('Original images');
     end
     
-    % IDENTIFY MATCHING FEATURES BETWEEN IMAGES
+    % Identify matching features between the images
     pts1 = detectSURFFeatures(im1);
     pts2 = detectSURFFeatures(im2);
     
@@ -64,7 +69,7 @@ function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
         title('Putatively matched points (including outliers)');
     end
     
-    % ESTIMATE TRANSFORMATION
+    % Estimate transformation
     [tform, inlier2, inlier1] = estimateGeometricTransform(...
         matched2, matched1, 'similarity');
     
@@ -78,7 +83,7 @@ function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
     
     [Theta, Scale] = solveTransform(tform);
     
-    % TRANSFORM IMAGE
+    % Transform image
     outputView = imref2d(size(im1));
     newIm2 = imwarp(im2, tform, 'OutputView', outputView);
     if plotFlag > 0
@@ -100,18 +105,28 @@ function [newIm2, Theta, Scale] = alignImages(im1, im2, plotFlag, savePath)
         figPos(gcf, 1, 0.75);
     end
     
-    % SAVE OUTPUT
+    % Save the output
     if ~isempty(savePath)
-        dlmwrite([savePath, '_theta.txt'], Theta);
-        dlmwrite([savePath, '_scale.txt'], Scale);
-        fprintf('Saved to %s\n\t and %s\n',... 
-            [savePath, '_theta.txt'], [savePath, '_scale.txt']);
+        jsonPath = [savePath, '.json'];
+        if exist(jsonPath, 'file')
+            S = loadjson(jsonPath);
+            S.Scale = Scale; S.Theta = Theta;
+        else
+            im2.Theta = Theta; im2.Scale = Scale;
+            im2.saveJSON();
+            dlmwrite([savePath, '_theta.txt'], Theta);
+            dlmwrite([savePath, '_scale.txt'], Scale);
+            fprintf('Saved to %s\n\t and %s\n',... 
+                [savePath, '_theta.txt'], [savePath, '_scale.txt']);
+        end
+        savejson('', S, jsonPath);
     end
 end
 
 function im = checkImage(im)
+    % CHECKIMAGE  Parse input image
     if isa(im, 'OCT')
-        im = im.octImage;
+        im = im.rawImage;
     end
 
     if ndims(im) == 3

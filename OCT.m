@@ -39,7 +39,7 @@ classdef OCT < handle
     end
 
     % Segmentation
-    properties (SetAccess = private)
+    properties (SetAccess = public)
         RPE = [];
         ILM = [];
         Choroid = [];
@@ -56,12 +56,12 @@ classdef OCT < handle
         choroidSize
         retinaSize
         choroidRatio
-        shiftedRatios = false;
     end
 
     % Lazy loading of images and analysis
     properties (Dependent = true, Hidden = true)
         octImage
+        rawImage
         imageName
     end
 
@@ -91,8 +91,6 @@ classdef OCT < handle
 
             obj.originalImage = obj.fetchImage();
             obj.pull();
-            
-            obj.shiftedRatios = false;
             
             if ~isempty(obj.Choroid) && ~isempty(obj.RPE)
                 obj.doAnalysis();
@@ -143,9 +141,8 @@ classdef OCT < handle
             cropValues = [ceil(cropValues(1:2)), floor(cropValues(3:4))];
             
             if saveValues
-                str = [obj.imagePath, filesep, obj.imageName, '_crop.txt'];
-                dlmwrite(str, cropValues);
-                fprintf('Wrote crop values to: %s\n', str);
+                obj.CropValues = cropValues;
+                obj.saveJSON();
             end
             delete(fh);
         end
@@ -196,7 +193,7 @@ classdef OCT < handle
             end
             if doShift && ~isempty(obj.Shift)
                 xpts = xpts + obj.Shift;
-                fprintf('Applying shift of %u pixels\n', obj.Shift);
+                fprintf('Applying shift of %.3g pixels\n', obj.Shift);
             end
         end
 
@@ -205,11 +202,12 @@ classdef OCT < handle
             warning('off', 'MATLAB:structOnObject');
             S = struct(obj);
             S = rmfield(S, {'choroidSize', 'retinaSize', 'choroidRatio'});
-            S = rmfield(S, {'shiftedRatios', 'FEATURES'});
-            S = rmfield(S, {'octImage', 'originalImage', 'imageName'});
-            str = savejson(S);
+            S = rmfield(S, {'imageName', 'FEATURES'});
+            S = rmfield(S, {'octImage', 'originalImage', 'rawImage'});
+
             savejson('', S, [obj.imagePath, filesep, obj.imageName, '.json']);
             warning('on', 'MATLAB:structOnObject');
+            fprintf('Saved %s.json\n', obj.imageName);
         end
         
         function igor = igor(obj, smoothFac)
@@ -266,8 +264,7 @@ classdef OCT < handle
                     'Tag', 'NormLine');
                 set(get(get(h, 'Annotation'), 'LegendInformation'),...
                     'IconDisplayStyle', 'off'); 
-                
-                % title(ax, [obj.imageName, ' choroid thickness']);
+
                 set(ax, 'Box', 'off'); grid(ax, 'on');
                 ylabel(ax, 'choroid:retina ratio');
                 xlabel(ax, 'x-axis (pixels)');
@@ -286,8 +283,8 @@ classdef OCT < handle
                     refRatio(numel(xpts)+1:end) = [];
                 elseif numel(xpts) > numel(refRatio)
                     thisRatio(numel(refRatio)+1:end) = [];
-                    xpts = refOCT.getXPts();
-                    
+                    % xpts = refOCT.getXPts();
+                    xpts(numel(refRatio)+1:end) = [];
                 end
                 plot(ax, xpts, smooth(thisRatio - refRatio, smoothFac),...
                     'Color', ip.Results.Color, 'LineWidth', 1.5);
@@ -375,13 +372,24 @@ classdef OCT < handle
             octImage = obj.doScale(octImage);
             octImage = obj.doRotate(octImage);
         end
+
+        function rawImage = get.rawImage(obj)
+            rawImage = obj.fetchImage(true);
+        end
     end
 
     % Private image processing methods
     methods (Access = private)
-        function im = fetchImage(obj)
+        function im = fetchImage(obj, getRaw)
             % FETCHIMAGE  Read image from file
-            str = [obj.imagePath, filesep, num2str(obj.imageID), '.png'];
+            if nargin < 2
+                getRaw = false;
+            end
+            if getRaw
+                str = [obj.imagePath, 'raw', filesep, num2str(obj.imageID), '.png'];
+            else
+                str = [obj.imagePath, num2str(obj.imageID), '.png'];
+            end
             im = imread(str);
 
             % Convert to grayscale if necessary
@@ -404,7 +412,7 @@ classdef OCT < handle
             % DOSCALE  Scale the image, if necessary
             if ~isempty(obj.Scale)
                 im = imresize(im, obj.Scale);
-                fprintf('Scaled by %.2g%%\n', 100 * obj.Scale);
+                fprintf('Scaled by %.4g%%\n', 100 * obj.Scale);
             end
         end
 
@@ -442,9 +450,11 @@ classdef OCT < handle
             else
                 S = loadjson(jsonPath);
                 tf = true;
+                if isfield(S, 'imageID') && ~isempty(S.imageID)
+                    assert(obj.imageID == S.imageID,...
+                        'Image ID numbers do not match!');
+                end
                 
-                assert(obj.imageID == S.imageID, 'Image ID numbers do not match!');
-
                 obj.refID = S.refID;
                 obj.RPE = S.RPE; obj.ILM = S.ILM;
                 obj.Shift = S.Shift; obj.Theta = S.Theta; obj.Scale = S.Scale;

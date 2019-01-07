@@ -43,6 +43,7 @@ classdef ChoroidApp < handle
 
     properties (SetAccess = private)
         originalImage
+        imageName
         figHandle
         axHandle
         imHandle
@@ -212,13 +213,22 @@ classdef ChoroidApp < handle
             else
                 return
             end
-            fpath = [uigetdir(), filesep, octName];
-            dlmwrite([fpath, '_controlpoints.txt'], obj.ControlPoints);
-            dlmwrite([fpath, '_choroid.txt'], obj.Choroid);
-            dlmwrite([fpath, '_rpe.txt'], obj.RPE);
-            dlmwrite([fpath, '_ilm.txt'], obj.ILM);
-            dlmwrite([fpath, '_parabola.txt'], obj.ChoroidParams);
-            fprintf('Saved as: %s\n', fpath);
+            jsonPath = [uigetdir(), filesep, octName, '.json'];
+            if ~exist(jsonPath, 'file')
+                S = struct('ChoroidParams', obj.ChoroidParams,...
+                    'ControlPoints', obj.ControlPoints,...
+                    'Choroid', obj.Choroid,...
+                    'RPE', obj.RPE, 'ILM', obj.ILM);
+            else
+                S = loadjson(jsonPath);
+                S.ControlPoints = obj.ControlPoints;
+                S.ChoroidParams = obj.ChoroidParams;
+                S.RPE = obj.RPE; S.ILM = obj.ILM;
+                S.Choroid = obj.Choroid; 
+            end
+            savejson('', S, jsonPath);
+
+            fprintf('Saved as: %s\n', jsonPath);
         end
     end
 
@@ -395,7 +405,7 @@ classdef ChoroidApp < handle
                 'BackgroundColor', 'w');
             uicontrol(nameLayout, 'Style', 'text', 'String', 'OCT Name:');
             uicontrol(nameLayout, 'Style', 'edit',...
-                'String', '',...
+                'String', obj.imageName,...
                 'Tag', 'OCTName');
             saveLayout = uix.HBox('Parent', uiLayout,...
                 'BackgroundColor', 'w');
@@ -407,7 +417,6 @@ classdef ChoroidApp < handle
                 'Callback', @obj.onExportFigure);
             uix.Empty('Parent', uiLayout);
             widths = cat(2, widths, [-0.5, -0.5, -0.6, -1, -0.25]);
-            
 
             set(uiLayout, 'Heights', widths);
             set(octLayout, 'Heights', [-0.5, -6]);
@@ -425,6 +434,7 @@ classdef ChoroidApp < handle
             % PARSEINPUT  Get OCT image and run initial processing
 
             tf = false;
+            obj.imageName = '';  % Blank unless provided by OCT class
             if isa(x, 'OCT')
                 if ~isempty(x.ControlPoints)
                     selection = questdlg('Import existing control points?');
@@ -433,6 +443,8 @@ classdef ChoroidApp < handle
                     end
                 end
                 im = x.octImage;
+                obj.imageName = x.imageName;
+                cd(x.imagePath);
             elseif ischar(x)
                 im = imread(x);
             elseif isnumeric(x)
