@@ -17,7 +17,7 @@ The code works best when all the images are in a single folder with numbers as f
 
 
 ### Dependencies
-This code was written in Matlab 2018 and requires the Bioinformatics, Computer Vision, Curve Fitting, Image Processing and Signal Processing toolboxes. All external dependencies are provided, except the free [GUI Layout Toolbox][guilayout], which can be installed from Matlab's Add-Ons window.
+This code was written in Matlab 2018 and requires the Bioinformatics, Computer Vision, Curve Fitting, Image Processing and Signal Processing toolboxes.
 
 ### References
 The initial ILM and RPE segmentation uses a simplified implementation of an algorithm introduced in:
@@ -25,5 +25,4 @@ The initial ILM and RPE segmentation uses a simplified implementation of an algo
 Chiu, S.J., Li, X.T., Nicholas, P., Toth, C.A., Izatt, J.A., Farsiu, S. (2010) Automatic segmentation of seven retinal layers in SDOCT images congruent with expert manual segmentation. *Optics Express*, 18(18), 19413-19428
 
 
-[guilayout]: <https://www.mathworks.com/matlabcentral/fileexchange/47982-gui-layout-toolbox>
 [neitzlab]: <http://www.neitzvision.com/>
