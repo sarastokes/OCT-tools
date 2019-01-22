@@ -67,13 +67,11 @@ function [rpe, ilm] = simpleSegmentation(img, varargin)
     % ----------------------
 
     % Pad image with vertical column on both sides
-    szImg = size(img);
-    imgNew = zeros([szImg(1) szImg(2)+2]);
-    imgNew(:,2:1+szImg(2)) = img;
-
+    imgNew = padarray(img, [0, 1], 0, 'both');
     szImgNew = size(imgNew);
 
     % Get the vertical gradient (dF/dy)
+    % TODO: gradient2?
     gradImg = nan(szImgNew);
     for i = 1:szImgNew(2)
         gradImg(:,i) = -1*gradient(imgNew(:,i),2);
