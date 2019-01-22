@@ -49,6 +49,8 @@ function [rpe, ilm] = simpleSegmentation(img, varargin)
     if ischar(img)
         img = imread(img);
     end
+    
+    img = im2double(img);
 
     if numel(size(img)) == 3
         img = rgb2gray(img);

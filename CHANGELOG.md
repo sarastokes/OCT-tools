@@ -4,6 +4,7 @@
 - Switched image padding code in `analysis\simpleSegmentation.m`
 - Fixed select peaks tooltip string typo for `HistogramPeakSlider.m`
 - Added `SegmentationPreprocessingTutorial.mlx`
+- Images are default converted to doubles now within `analysis\simpleSegmentation.m`
 
 ### 7Jan2019
 - Added image reload to `ChoroidApp.m` and `OCT\update()`
