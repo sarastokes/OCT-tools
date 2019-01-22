@@ -154,6 +154,16 @@ classdef HistogramPeakSlider < handle
             obj.chosenPeak = []; obj.chosenTrough = [];
             obj.calculatedMidpoint = [];
         end
+        
+        function onChangeColormap(obj, src, ~)
+            if strcmp(get(src, 'Tag'), 'gray')
+                colormap(obj.figHandle, pink);
+                set(src, 'Tag', 'pink');
+            else
+                colormap(obj.figHandle, gray);
+                set(src, 'Tag', 'gray');
+            end
+        end
 
         function onFindPeaks(obj, ~, ~)
             [pkInd, trInd] = histogramPeaks(...
@@ -407,6 +417,12 @@ classdef HistogramPeakSlider < handle
                 'Tag', 'SliderText');
             uicontrol(uiLayout,...
                 'Style', 'push',...
+                'String', 'Change colormap',...
+                'TooltipString', 'Change from gray to pink colormap',...
+                'Tag', 'gray',...
+                'Callback', @obj.onChangeColormap);
+            uicontrol(uiLayout,...
+                'Style', 'push',...
                 'String', 'Find Extrema',...
                 'TooltipString', 'Find peaks of current histogram (''f'')',...
                 'Callback', @obj.onFindPeaks);
@@ -447,7 +463,7 @@ classdef HistogramPeakSlider < handle
             
             obj.createExportUI(uiLayout);
             
-            set(uiLayout, 'Heights', [-0.5, -1, -1, -0.5, -0.5, -0.5, -1, -1.5])
+            set(uiLayout, 'Heights', [-0.5, -1, -1, -1, -0.5, -0.5, -0.5, -1, -1.5])
             set(mainLayout, 'Widths', [-2.3, -1, -0.6]);
         end
 
