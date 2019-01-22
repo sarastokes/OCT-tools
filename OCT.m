@@ -135,6 +135,8 @@ classdef OCT < handle
             
             % Return if no crop specified.
             if isempty(cropValues)
+                obj.CropValues = [];
+                obj.saveJSON();
                 return;
             end          
             cropValues = [ceil(cropValues(1:2)), floor(cropValues(3:4))];
