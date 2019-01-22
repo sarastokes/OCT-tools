@@ -7,6 +7,7 @@
 - Images are default converted to doubles now within `analysis\simpleSegmentation.m`
 - Colormap in `ChoroidApp.m` is now pink, added colormap button to `HistogramPeakSlider.m`
 - Closing out of `OCT\crop` without specifying a crop value resets JSON crop value
+- Image alignment with `analysis\alignImages.m` now uses cropped raw images
 
 ### 7Jan2019
 - Added image reload to `ChoroidApp.m` and `OCT\update()`

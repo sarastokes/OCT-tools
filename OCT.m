@@ -111,7 +111,7 @@ classdef OCT < handle
             addParameter(ip, 'Rotate', false, @islogical);
             parse(ip, varargin{:});
 
-            im = obj.fetchImage();
+            im = obj.fetchImage(true);
             if ip.Results.Crop
                 im = obj.doCrop(im);
             end

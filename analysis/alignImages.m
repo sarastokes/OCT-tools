@@ -126,7 +126,7 @@ end
 function im = checkImage(im)
     % CHECKIMAGE  Parse input image
     if isa(im, 'OCT')
-        im = im.rawImage;
+        im = im.getSemiProcessedImage('Crop', true);
     end
 
     if ndims(im) == 3
