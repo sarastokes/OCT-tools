@@ -5,6 +5,7 @@
 - Fixed select peaks tooltip string typo for `HistogramPeakSlider.m`
 - Added `SegmentationPreprocessingTutorial.mlx`
 - Images are default converted to doubles now within `analysis\simpleSegmentation.m`
+- Colormap in `ChoroidApp.m` is now pink
 
 ### 7Jan2019
 - Added image reload to `ChoroidApp.m` and `OCT\update()`

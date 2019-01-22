@@ -203,7 +203,7 @@ classdef ChoroidApp < handle
 
         function onChangeCMap(obj, src, ~)
             if strcmp(get(src, 'Tag'), 'gray')
-                colormap(obj.figHandle, parula);
+                colormap(obj.figHandle, pink);
                 set(src, 'Tag', 'parula');
             else
                 colormap(obj.figHandle, gray);
